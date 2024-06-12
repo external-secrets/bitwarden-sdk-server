@@ -16,11 +16,14 @@ package server
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+
+	"github.com/external-secrets/bitwarden-sdk-server/pkg/bitwarden"
 )
 
 const (
@@ -49,7 +52,8 @@ func NewServer(cfg Config) *Server {
 func (s *Server) Run(_ context.Context) error {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
-	r.Get(api, func(w http.ResponseWriter, r *http.Request) {
+	r.Get(api+"/get/secret", func(w http.ResponseWriter, r *http.Request) {
+		bitwarden.GetSecret()
 		_, _ = w.Write([]byte("welcome"))
 	})
 
@@ -57,6 +61,7 @@ func (s *Server) Run(_ context.Context) error {
 	s.server = srv
 
 	if s.Insecure {
+		slog.Info("starting to listen on http", "addr", s.Addr)
 		return srv.ListenAndServe()
 	}
 

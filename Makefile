@@ -37,16 +37,8 @@ GOLANGCI_LINT_VERSION ?= v1.57.2
 
 ##@ Build
 
-binaries: ## Builds binaries for all supported platforms, linux, darwin
-	CGO_ENABLED=0 gox \
-		-osarch="linux/amd64 linux/arm darwin/amd64" \
-		-ldflags=${GO_LDFLAGS_STATIC} \
-		-output="$(BUILDDIR)/{{.OS}}/{{.Arch}}/$(NAME)" \
-		-tags="netgo" \
-		./
-
-bootstrap: ## Installs necessary third party components
-	go get github.com/mitchellh/gox
+build: ## Builds binarie
+	CGO_LDFLAGS="-framework CoreFoundation" CGO_ENABLED=1 go build main.go
 
 ##@ Testing
 
