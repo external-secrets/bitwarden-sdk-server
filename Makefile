@@ -37,8 +37,11 @@ GOLANGCI_LINT_VERSION ?= v1.57.2
 
 ##@ Build
 
-build: ## Builds binarie
-	CGO_LDFLAGS="-framework CoreFoundation" CGO_ENABLED=1 go build main.go
+build: ## Builds binaries
+	CGO_LDFLAGS="-framework CoreFoundation" CGO_ENABLED=1 go build -ldflags='-s -w' -o $(LOCALBIN)/$(NAME) main.go
+
+build-docker: ## Builds binaries
+	CC=musl-gcc CGO_LDFLAGS="-lm" CGO_ENABLED=1 go build -a -ldflags '-linkmode external -extldflags "-static -Wl,-unresolved-symbols=ignore-all"' -o $(LOCALBIN)/$(NAME) main.go
 
 ##@ Testing
 
