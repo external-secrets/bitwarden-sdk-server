@@ -52,6 +52,9 @@ lint: golangci-lint ## Run golangci-lint.
 clean: ## Runs go clean
 	go clean -i
 
+test: ## Test the project
+	go test ./... -coverprofile cover.out
+
 ##@ Docker
 
 IMG ?= ghcr.io/external-secrets/bitwarden-sdk-server
