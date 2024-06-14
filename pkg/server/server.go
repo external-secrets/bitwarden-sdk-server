@@ -22,8 +22,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-
-	"github.com/external-secrets/bitwarden-sdk-server/pkg/bitwarden"
 )
 
 const (
@@ -58,18 +56,11 @@ func (s *Server) Run(_ context.Context) error {
 	r.Get("/live", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("live"))
 	})
-	r.Get(api+"/secret", func(w http.ResponseWriter, r *http.Request) {
-		bitwarden.GetSecret()
-		_, _ = w.Write([]byte("welcome"))
-	})
-	r.Delete(api+"/secret", func(w http.ResponseWriter, r *http.Request) {
-		bitwarden.GetSecret()
-		_, _ = w.Write([]byte("welcome"))
-	})
-	r.Post(api+"/secret", func(w http.ResponseWriter, r *http.Request) {
-		bitwarden.GetSecret()
-		_, _ = w.Write([]byte("welcome"))
-	})
+
+	r.Post(api+"/login", s.loginHandler)
+	r.Get(api+"/secret", s.getSecretHandler)
+	r.Delete(api+"/secret", s.deleteSecretHandler)
+	r.Post(api+"/secret", s.createSecretHandler)
 
 	srv := &http.Server{Addr: s.Addr, Handler: r, ReadTimeout: 5 * time.Second}
 	s.server = srv
@@ -84,4 +75,16 @@ func (s *Server) Run(_ context.Context) error {
 
 func (s *Server) Shutdown(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
+}
+
+func (s *Server) getSecretHandler(writer http.ResponseWriter, request *http.Request) {
+}
+
+func (s *Server) deleteSecretHandler(writer http.ResponseWriter, request *http.Request) {
+}
+
+func (s *Server) createSecretHandler(writer http.ResponseWriter, request *http.Request) {
+}
+
+func (s *Server) loginHandler(writer http.ResponseWriter, request *http.Request) {
 }

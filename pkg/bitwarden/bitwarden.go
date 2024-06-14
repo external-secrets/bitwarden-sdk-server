@@ -15,29 +15,48 @@ limitations under the License.
 package bitwarden
 
 import (
-	"os"
-
 	"github.com/bitwarden/sdk-go"
 )
 
-func GetSecret() {
-	// Configuring the URLS is optional, set them to nil to use the default values
-	apiURL := os.Getenv("API_URL")
-	identityURL := os.Getenv("IDENTITY_URL")
+const (
+	defaultAPIURL      = "https://api.bitwarden.com"
+	defaultIdentityURL = "https://identity.bitwarden.com"
+	defaultStatePath   = ".bitwarden-state"
+)
 
+// RequestBase contains optional API_URL and IDENTITY_URL values. If not defined,
+// defaults are used always.
+type RequestBase struct {
+	APIURL      string `yaml:"apiUrl,omitempty"`
+	IdentityURL string `yaml:"identityUrl,omitempty"`
+}
+
+// LoginRequest defines bitwarden login details to Secrets Manager.
+type LoginRequest struct {
+	*RequestBase `yaml:",inline,omitempty"`
+
+	AccessToken string `yaml:"accessToken"`
+	StatePath   string `yaml:"statePath,omitempty"`
+}
+
+// Login creates a session for further Bitwarden requests.
+func Login(req *LoginRequest) error {
+	// Configuring the URLS is optional, set them to nil to use the default values
+	apiURL := defaultAPIURL
+	identityURL := defaultIdentityURL
+
+	// TODO: Cache the client... or the session?
 	bitwardenClient, err := sdk.NewBitwardenClient(&apiURL, &identityURL)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	defer bitwardenClient.Close()
 
-	accessToken := os.Getenv("ACCESS_TOKEN")
-	// Configuring the statePath is optional, pass nil
-	// in AccessTokenLogin() to not use state
-	statePath := os.Getenv("STATE_PATH")
-
-	if err := bitwardenClient.AccessTokenLogin(accessToken, &statePath); err != nil {
-		panic(err)
+	var statePath string
+	if req.StatePath == "" {
+		statePath = defaultStatePath
 	}
+
+	return bitwardenClient.AccessTokenLogin(req.AccessToken, &statePath)
 }
