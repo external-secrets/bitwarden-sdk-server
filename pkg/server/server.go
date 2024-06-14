@@ -52,6 +52,12 @@ func NewServer(cfg Config) *Server {
 func (s *Server) Run(_ context.Context) error {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+	r.Get("/ready", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("ready"))
+	})
+	r.Get("/live", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("live"))
+	})
 	r.Get(api+"/secret", func(w http.ResponseWriter, r *http.Request) {
 		bitwarden.GetSecret()
 		_, _ = w.Write([]byte("welcome"))

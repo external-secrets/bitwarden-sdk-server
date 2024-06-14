@@ -55,8 +55,7 @@ func runServeCmd(_ *cobra.Command, _ []string) error {
 	svr := server.NewServer(rootArgs.server)
 	go func() {
 		if err := svr.Run(context.Background()); err != nil {
-			slog.Error("failed to start server", "error", err)
-			os.Exit(1)
+			slog.Error("server stopped", "error", err)
 		}
 	}()
 
