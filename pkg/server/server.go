@@ -22,6 +22,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+
+	"github.com/external-secrets/bitwarden-sdk-server/pkg/bitwarden"
 )
 
 const (
@@ -50,6 +52,8 @@ func NewServer(cfg Config) *Server {
 func (s *Server) Run(_ context.Context) error {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(bitwarden.Warden)
 	r.Get("/ready", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("ready"))
 	})
@@ -57,7 +61,8 @@ func (s *Server) Run(_ context.Context) error {
 		_, _ = w.Write([]byte("live"))
 	})
 
-	r.Post(api+"/login", s.loginHandler)
+	//r.Post(api+"/login", s.loginHandler)
+	// The header will always contain the right credentials.
 	r.Get(api+"/secret", s.getSecretHandler)
 	r.Delete(api+"/secret", s.deleteSecretHandler)
 	r.Post(api+"/secret", s.createSecretHandler)
@@ -77,14 +82,35 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
-func (s *Server) getSecretHandler(writer http.ResponseWriter, request *http.Request) {
+func (s *Server) getSecretHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
-func (s *Server) deleteSecretHandler(writer http.ResponseWriter, request *http.Request) {
+func (s *Server) deleteSecretHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
-func (s *Server) createSecretHandler(writer http.ResponseWriter, request *http.Request) {
+func (s *Server) createSecretHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
-func (s *Server) loginHandler(writer http.ResponseWriter, request *http.Request) {
-}
+//func (s *Server) loginHandler(writer http.ResponseWriter, request *http.Request) {
+//	defer request.Body.Close()
+//
+//	decoder := json.NewDecoder(request.Body)
+//	loginReq := &bitwarden.LoginRequest{}
+//
+//	if err := decoder.Decode(loginReq); err != nil {
+//		http.Error(writer, "failed to unmarshal login request: "+err.Error(), http.StatusInternalServerError)
+//
+//		return
+//	}
+//
+//	client, err := bitwarden.Login(loginReq)
+//	if err != nil {
+//		http.Error(writer, "failed to login to bitwarden using access token: "+err.Error(), http.StatusBadRequest)
+//
+//		return
+//	}
+//
+//	s.Client = client
+//
+//	writer.WriteHeader(http.StatusOK)
+//}
