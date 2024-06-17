@@ -16,10 +16,13 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
 
+	"github.com/bitwarden/sdk-go"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -61,7 +64,6 @@ func (s *Server) Run(_ context.Context) error {
 		_, _ = w.Write([]byte("live"))
 	})
 
-	//r.Post(api+"/login", s.loginHandler)
 	// The header will always contain the right credentials.
 	r.Get(api+"/secret", s.getSecretHandler)
 	r.Delete(api+"/secret", s.deleteSecretHandler)
@@ -82,7 +84,56 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
-func (s *Server) getSecretHandler(w http.ResponseWriter, _ *http.Request) {
+// GetSecretRequest is the format in which we required secrets to be requested in.
+type GetSecretRequest struct {
+	SecretID string `json:"secretId"`
+}
+
+func (s *Server) getSecretHandler(w http.ResponseWriter, r *http.Request) {
+	content, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+	defer r.Body.Close()
+
+	request := &GetSecretRequest{}
+	if err := json.Unmarshal(content, request); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	client := r.Context().Value(bitwarden.ContextClientKey)
+	if client == nil {
+		http.Error(w, "missing client in context, login error", http.StatusInternalServerError)
+
+		return
+	}
+
+	c := client.(sdk.BitwardenClientInterface)
+	secretResponse, err := c.Secrets().Get(request.SecretID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	body, err := json.Marshal(secretResponse)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	if _, err := w.Write(body); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (s *Server) deleteSecretHandler(w http.ResponseWriter, _ *http.Request) {
@@ -90,27 +141,3 @@ func (s *Server) deleteSecretHandler(w http.ResponseWriter, _ *http.Request) {
 
 func (s *Server) createSecretHandler(w http.ResponseWriter, _ *http.Request) {
 }
-
-//func (s *Server) loginHandler(writer http.ResponseWriter, request *http.Request) {
-//	defer request.Body.Close()
-//
-//	decoder := json.NewDecoder(request.Body)
-//	loginReq := &bitwarden.LoginRequest{}
-//
-//	if err := decoder.Decode(loginReq); err != nil {
-//		http.Error(writer, "failed to unmarshal login request: "+err.Error(), http.StatusInternalServerError)
-//
-//		return
-//	}
-//
-//	client, err := bitwarden.Login(loginReq)
-//	if err != nil {
-//		http.Error(writer, "failed to login to bitwarden using access token: "+err.Error(), http.StatusBadRequest)
-//
-//		return
-//	}
-//
-//	s.Client = client
-//
-//	writer.WriteHeader(http.StatusOK)
-//}

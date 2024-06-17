@@ -24,12 +24,21 @@ import (
 
 type contextKey string
 
-var contextClientKey contextKey = "warden-client"
+var ContextClientKey contextKey = "warden-client"
 
+// Default Settings.
 const (
 	defaultAPIURL      = "https://api.bitwarden.com"
 	defaultIdentityURL = "https://identity.bitwarden.com"
 	defaultStatePath   = ".bitwarden-state"
+)
+
+// Defined Header Keys.
+const (
+	WardenHeaderAccessToken = "Warden-Access-Token"
+	WardenHeaderStatePath   = "Warden-State-Path"
+	WardenHeaderAPIURL      = "Warden-Api-Url"
+	WardenHeaderIdentityURL = "Warden-Identity-Url"
 )
 
 // RequestBase contains optional API_URL and IDENTITY_URL values. If not defined,
@@ -47,26 +56,30 @@ type LoginRequest struct {
 	StatePath   string `yaml:"statePath,omitempty"`
 }
 
+// setOrDefault returns a value if not empty, otherwise a default.
+func setOrDefault(v, def string) string {
+	if v != "" {
+		return v
+	}
+
+	return def
+}
+
 // Login creates a session for further Bitwarden requests.
 // Note: I don't like returning the interface, but that's what
 // the client returns.
 func Login(req *LoginRequest) (sdk.BitwardenClientInterface, error) {
 	// Configuring the URLS is optional, set them to nil to use the default values
-	apiURL := defaultAPIURL
-	identityURL := defaultIdentityURL
+	apiURL := setOrDefault(req.APIURL, defaultAPIURL)
+	identityURL := setOrDefault(req.IdentityURL, defaultIdentityURL)
+	statePath := setOrDefault(req.StatePath, defaultStatePath)
 
 	// TODO: Cache the client... or the session?
 	bitwardenClient, err := sdk.NewBitwardenClient(&apiURL, &identityURL)
 	if err != nil {
 		return nil, err
 	}
-
 	defer bitwardenClient.Close()
-
-	var statePath string
-	if req.StatePath == "" {
-		statePath = defaultStatePath
-	}
 
 	if err := bitwardenClient.AccessTokenLogin(req.AccessToken, &statePath); err != nil {
 		return nil, fmt.Errorf("bitwarden login: %w", err)
@@ -77,22 +90,47 @@ func Login(req *LoginRequest) (sdk.BitwardenClientInterface, error) {
 
 // Warden is a middleware to use with the bitwarden API.
 // Header used by the Warden:
-// warden-access-token: <token>
-// warden-state-path: <state-path>
-// warden-api-url: <url>
-// warden-identity-url: <url>
+// Warden-Access-Token: <token>
+// Warden-State-Path: <state-path>
+// Warden-Api-Url: <url>
+// Warden-Identity-Url: <url>
 // Put the client into the context and so if a context contains our client
 // we know that calls are authenticated.
 func Warden(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		if ctx.Value(contextClientKey) != nil {
+		if ctx.Value(ContextClientKey) != nil {
 			next.ServeHTTP(w, r.WithContext(ctx))
 
 			return
 		}
 
-		ctx = context.WithValue(ctx, contextClientKey, nil)
+		defer r.Body.Close()
+
+		token := r.Header.Get(WardenHeaderAccessToken)
+		if token == "" {
+			http.Error(w, "Missing Warden access token", http.StatusUnauthorized)
+
+			return
+		}
+
+		loginRequest := &LoginRequest{
+			RequestBase: &RequestBase{
+				APIURL:      r.Header.Get(WardenHeaderAPIURL),
+				IdentityURL: r.Header.Get(WardenHeaderIdentityURL),
+			},
+			AccessToken: token,
+			StatePath:   r.Header.Get(WardenHeaderStatePath),
+		}
+
+		client, err := Login(loginRequest)
+		if err != nil {
+			http.Error(w, "failed to login to bitwarden using access token: "+err.Error(), http.StatusBadRequest)
+
+			return
+		}
+
+		ctx = context.WithValue(ctx, ContextClientKey, client)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
