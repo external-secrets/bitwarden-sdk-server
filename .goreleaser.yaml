@@ -1,0 +1,32 @@
+# This is an example .goreleaser.yml file with some sensible defaults.
+# Make sure to check the documentation at https://goreleaser.com
+archives:
+  - name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+# for more information on what this target does: https://goreleaser.com/errors/docker-build/
+dockers:
+  - id: linux-build
+    image_templates:
+    - "{{ .Env.REGISTRY }}/external-secrets/bitwarden-sdk-server:{{ .Tag }}"
+    - "{{ .Env.REGISTRY }}/external-secrets/bitwarden-sdk-server:latest"
+    # GOOS of the built binary that should be used.
+    goos: linux
+    # GOARCH of the built binary that should be used.
+    goarch: amd64
+    dockerfile: Dockerfile
+    build_flag_templates:
+    - "--platform=linux/amd64"
