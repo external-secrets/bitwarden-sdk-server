@@ -17,6 +17,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -84,43 +85,93 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
-// GetSecretRequest is the format in which we required secrets to be requested in.
-type GetSecretRequest struct {
-	SecretID string `json:"secretId"`
-}
-
 func (s *Server) getSecretHandler(w http.ResponseWriter, r *http.Request) {
-	content, err := io.ReadAll(r.Body)
+	request := &sdk.SecretGetRequest{}
+	c, err := s.getClient(r, &request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	secretResponse, err := c.Secrets().Get(request.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 
 		return
 	}
-	defer r.Body.Close()
 
-	request := &GetSecretRequest{}
-	if err := json.Unmarshal(content, request); err != nil {
+	s.handleResponse(secretResponse, w)
+}
+
+type DeleteSecretRequest struct {
+	SecretIDs []string `json:"secretIds"`
+}
+
+func (s *Server) deleteSecretHandler(w http.ResponseWriter, r *http.Request) {
+	request := &sdk.SecretsDeleteRequest{}
+	c, err := s.getClient(r, &request)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 
 		return
+	}
+
+	response, err := c.Secrets().Delete(request.IDS)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	s.handleResponse(response, w)
+}
+
+func (s *Server) createSecretHandler(w http.ResponseWriter, r *http.Request) {
+	request := &sdk.SecretCreateRequest{}
+	c, err := s.getClient(r, &request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	response, err := c.Secrets().Create(request.Key, request.Value, request.Note, request.OrganizationID, request.ProjectIDS)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	s.handleResponse(response, w)
+}
+
+func (s *Server) getClient(r *http.Request, response any) (sdk.BitwardenClientInterface, error) {
+	content, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Body.Close()
+
+	if err := json.Unmarshal(content, response); err != nil {
+		return nil, err
 	}
 
 	client := r.Context().Value(bitwarden.ContextClientKey)
 	if client == nil {
-		http.Error(w, "missing client in context, login error", http.StatusInternalServerError)
-
-		return
+		return nil, errors.New("missing client in context, login error")
 	}
 
-	c := client.(sdk.BitwardenClientInterface)
-	secretResponse, err := c.Secrets().Get(request.SecretID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-
-		return
+	c, ok := client.(sdk.BitwardenClientInterface)
+	if !ok {
+		return nil, errors.New("invalid client in context, login error")
 	}
 
-	body, err := json.Marshal(secretResponse)
+	return c, nil
+}
+
+func (s *Server) handleResponse(response any, w http.ResponseWriter) {
+	body, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
@@ -134,10 +185,4 @@ func (s *Server) getSecretHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-}
-
-func (s *Server) deleteSecretHandler(w http.ResponseWriter, _ *http.Request) {
-}
-
-func (s *Server) createSecretHandler(w http.ResponseWriter, _ *http.Request) {
 }
