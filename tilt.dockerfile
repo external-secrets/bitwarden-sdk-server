@@ -4,4 +4,4 @@ COPY ./bin/bitwarden-sdk-server /bitwarden-sdk-server
 
 ENV CGO_ENABLED=1
 ENV BW_SECRETS_MANAGER_STATE_PATH='/state'
-ENTRYPOINT ["/bitwarden-sdk-server", "serve", "--insecure"]
+ENTRYPOINT ["/bitwarden-sdk-server", "serve"]

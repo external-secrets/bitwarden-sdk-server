@@ -6,9 +6,7 @@ kubectl_cmd = "kubectl"
 if str(local("command -v " + kubectl_cmd + " || true", quiet = True)) == "":
     fail("Required command '" + kubectl_cmd + "' not found in PATH")
 
-load('ext://namespace', 'namespace_yaml')
-k8s_yaml(namespace_yaml('external-secrets'), allow_duplicates=True)
-install = helm('deploy', namespace = 'external-secrets', set = 'image.tls.enabled=False')
+install = helm('deploy/charts/bitwarden-sdk-server')
 
 # Apply the updated yaml to the cluster.
 k8s_yaml(install, allow_duplicates = True)

@@ -57,7 +57,6 @@ func (s *Server) Run(_ context.Context) error {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(bitwarden.Warden)
 	r.Get("/ready", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("ready"))
 	})
@@ -65,10 +64,15 @@ func (s *Server) Run(_ context.Context) error {
 		_, _ = w.Write([]byte("live"))
 	})
 
+	warden := chi.NewRouter()
+	warden.Use(bitwarden.Warden)
+
 	// The header will always contain the right credentials.
-	r.Get(api+"/secret", s.getSecretHandler)
-	r.Delete(api+"/secret", s.deleteSecretHandler)
-	r.Post(api+"/secret", s.createSecretHandler)
+	warden.Get("/secret", s.getSecretHandler)
+	warden.Delete("/secret", s.deleteSecretHandler)
+	warden.Post("/secret", s.createSecretHandler)
+
+	r.Mount(api, warden)
 
 	srv := &http.Server{Addr: s.Addr, Handler: r, ReadTimeout: 5 * time.Second}
 	s.server = srv

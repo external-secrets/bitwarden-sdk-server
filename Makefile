@@ -20,6 +20,8 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
+MKCERT ?= $(LOCALBIN)/mkcert
+UNAME ?= $(shell uname|tr '[:upper:]' '[:lower:]')
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -32,8 +34,15 @@ endif
 # List the GOOS and GOARCH to build
 GO_LDFLAGS_STATIC="-s -w $(CTIMEVAR) -extldflags -static"
 GOLANGCI_LINT_VERSION ?= v1.57.2
+MKCERT_VERSION ?= v1.4.4
 
 .DEFAULT_GOAL := help
+
+.PHONY: mkcert
+mkcert: $(MKCERT)
+$(MKCERT): $(LOCALBIN)
+	curl -L "https://github.com/FiloSottile/mkcert/releases/download/$(MKCERT_VERSION)/mkcert-$(MKCERT_VERSION)-$(UNAME)-amd64" -o $(LOCALBIN)/mkcert
+	chmod +x $(LOCALBIN)/mkcert
 
 ##@ Build
 
@@ -54,6 +63,10 @@ clean: ## Runs go clean
 
 test: ## Test the project
 	go test ./... -coverprofile cover.out
+
+.PHONY: prime-test-cluster
+prime-test-cluster: mkcert
+	./hack/prime_test_cluster.sh
 
 ##@ Docker
 
