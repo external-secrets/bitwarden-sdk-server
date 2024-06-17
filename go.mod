@@ -5,8 +5,7 @@ go 1.22
 require (
 	github.com/bitwarden/sdk-go v0.1.1
 	github.com/go-chi/chi/v5 v5.0.12
-	github.com/gofrs/uuid v4.4.0+incompatible
-	github.com/spf13/cobra v1.8.0
+	github.com/spf13/cobra v1.8.1
 )
 
 require (
