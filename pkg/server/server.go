@@ -97,19 +97,16 @@ func (s *Server) getSecretHandler(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
+	defer c.Close()
 
 	secretResponse, err := c.Secrets().Get(request.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to get secret: "+err.Error(), http.StatusBadRequest)
 
 		return
 	}
 
 	s.handleResponse(secretResponse, w)
-}
-
-type DeleteSecretRequest struct {
-	SecretIDs []string `json:"secretIds"`
 }
 
 func (s *Server) deleteSecretHandler(w http.ResponseWriter, r *http.Request) {
@@ -120,6 +117,7 @@ func (s *Server) deleteSecretHandler(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
+	defer c.Close()
 
 	response, err := c.Secrets().Delete(request.IDS)
 	if err != nil {
@@ -139,10 +137,11 @@ func (s *Server) createSecretHandler(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
+	defer c.Close()
 
 	response, err := c.Secrets().Create(request.Key, request.Value, request.Note, request.OrganizationID, request.ProjectIDS)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to create secret: "+err.Error(), http.StatusBadRequest)
 
 		return
 	}

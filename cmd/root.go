@@ -16,7 +16,9 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -54,8 +56,8 @@ const timeout = 15 * time.Second
 func runServeCmd(_ *cobra.Command, _ []string) error {
 	svr := server.NewServer(rootArgs.server)
 	go func() {
-		if err := svr.Run(context.Background()); err != nil {
-			slog.Error("server stopped", "error", err)
+		if err := svr.Run(context.Background()); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("server stopped unexpectedly", "error", err)
 		}
 	}()
 

@@ -17,6 +17,7 @@ package bitwarden
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/bitwarden/sdk-go"
@@ -74,12 +75,12 @@ func Login(req *LoginRequest) (sdk.BitwardenClientInterface, error) {
 	identityURL := setOrDefault(req.IdentityURL, defaultIdentityURL)
 	statePath := setOrDefault(req.StatePath, defaultStatePath)
 
-	// TODO: Cache the client... or the session?
+	// Client is closed in the calling handlers.
+	slog.Debug("constructed client with api and identity url", "api", apiURL, "identityUrl", identityURL, "statePath", statePath)
 	bitwardenClient, err := sdk.NewBitwardenClient(&apiURL, &identityURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create client: %w", err)
 	}
-	defer bitwardenClient.Close()
 
 	if err := bitwardenClient.AccessTokenLogin(req.AccessToken, &statePath); err != nil {
 		return nil, fmt.Errorf("bitwarden login: %w", err)

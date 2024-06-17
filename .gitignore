@@ -23,3 +23,4 @@ go.work.sum
 bin/
 dist/
 hack/cert-manager.yaml
+hack/rootCA.pem
