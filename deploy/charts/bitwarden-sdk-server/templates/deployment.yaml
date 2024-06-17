@@ -43,6 +43,7 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+          {{- if not .Values.image.tls.enabled }}
           livenessProbe:
             httpGet:
               path: /live
@@ -53,6 +54,7 @@ spec:
               path: /ready
               port: http
               scheme: HTTPS
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
