@@ -44,8 +44,8 @@ func init() {
 	// Server Configs
 	flag.BoolVar(&rootArgs.server.Debug, "debug", false, "--debug")
 	flag.BoolVar(&rootArgs.server.Insecure, "insecure", false, "--insecure")
-	flag.StringVar(&rootArgs.server.KeyFile, "key-file", "", "--key-file /home/user/.server/server.key")
-	flag.StringVar(&rootArgs.server.CertFile, "cert-file", "", "--cert-file /home/user/.server/server.crt")
+	flag.StringVar(&rootArgs.server.KeyFile, "key-file", "", "--key-file /certs/key.pem")
+	flag.StringVar(&rootArgs.server.CertFile, "cert-file", "", "--cert-file /certs/cert.pem")
 	flag.StringVar(&rootArgs.server.Addr, "hostname", ":9998", "--hostname :9998")
 }
 
