@@ -99,15 +99,6 @@ func Login(req *LoginRequest) (sdk.BitwardenClientInterface, error) {
 // we know that calls are authenticated.
 func Warden(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		if ctx.Value(ContextClientKey) != nil {
-			next.ServeHTTP(w, r.WithContext(ctx))
-
-			return
-		}
-
-		defer r.Body.Close()
-
 		token := r.Header.Get(WardenHeaderAccessToken)
 		if token == "" {
 			http.Error(w, "Missing Warden access token", http.StatusUnauthorized)
@@ -124,6 +115,7 @@ func Warden(next http.Handler) http.Handler {
 			StatePath:   r.Header.Get(WardenHeaderStatePath),
 		}
 
+		// Make sure every request gets its own client that it will close after it's done.
 		client, err := Login(loginRequest)
 		if err != nil {
 			http.Error(w, "failed to login to bitwarden using access token: "+err.Error(), http.StatusBadRequest)
@@ -131,7 +123,7 @@ func Warden(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx = context.WithValue(ctx, ContextClientKey, client)
+		ctx := context.WithValue(r.Context(), ContextClientKey, client)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

@@ -27,8 +27,8 @@ image:
               path: "ca.pem"
 
 imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
+nameOverride: "bitwarden-sdk-server"
+fullnameOverride: "bitwarden-sdk-server"
 
 serviceAccount:
   # Specifies whether a service account should be created

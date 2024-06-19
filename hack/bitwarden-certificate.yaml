@@ -7,6 +7,7 @@ spec:
   secretName: bitwarden-tls-certs
   dnsNames:
     - bitwarden-sdk-server.default.svc.cluster.local
+    - external-secrets-bitwarden-sdk-server.default.svc.cluster.local
     - localhost
   ipAddresses:
     - 127.0.0.1
