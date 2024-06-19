@@ -69,6 +69,7 @@ func (s *Server) Run(_ context.Context) error {
 
 	// The header will always contain the right credentials.
 	warden.Get("/secret", s.getSecretHandler)
+	warden.Get("/secrets", s.listSecretsHandler)
 	warden.Delete("/secret", s.deleteSecretHandler)
 	warden.Post("/secret", s.createSecretHandler)
 
@@ -100,6 +101,26 @@ func (s *Server) getSecretHandler(w http.ResponseWriter, r *http.Request) {
 	defer c.Close()
 
 	secretResponse, err := c.Secrets().Get(request.ID)
+	if err != nil {
+		http.Error(w, "failed to get secret: "+err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	s.handleResponse(secretResponse, w)
+}
+
+func (s *Server) listSecretsHandler(w http.ResponseWriter, r *http.Request) {
+	request := &sdk.SecretIdentifiersRequest{}
+	c, err := s.getClient(r, &request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+	defer c.Close()
+
+	secretResponse, err := c.Secrets().List(request.OrganizationID)
 	if err != nil {
 		http.Error(w, "failed to get secret: "+err.Error(), http.StatusBadRequest)
 
