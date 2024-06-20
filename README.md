@@ -166,4 +166,5 @@ to create the service. Note OSX users must install https://github.com/FiloSottil
 build the CGO library.
 
 ## License
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fexternal-secrets%2Fexternal-secrets.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fexternal-secrets%2Fexternal-secrets?ref=badge_large)
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fexternal-secrets%2Fbitwarden-sdk-server.svg?type=large&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Fexternal-secrets%2Fbitwarden-sdk-server?ref=badge_large&issueType=license)
