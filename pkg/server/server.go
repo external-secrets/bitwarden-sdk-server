@@ -72,6 +72,7 @@ func (s *Server) Run(_ context.Context) error {
 	warden.Get("/secrets", s.listSecretsHandler)
 	warden.Delete("/secret", s.deleteSecretHandler)
 	warden.Post("/secret", s.createSecretHandler)
+	warden.Put("/secret", s.updateSecretHandler)
 
 	r.Mount(api, warden)
 
@@ -163,6 +164,26 @@ func (s *Server) createSecretHandler(w http.ResponseWriter, r *http.Request) {
 	response, err := c.Secrets().Create(request.Key, request.Value, request.Note, request.OrganizationID, request.ProjectIDS)
 	if err != nil {
 		http.Error(w, "failed to create secret: "+err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	s.handleResponse(response, w)
+}
+
+func (s *Server) updateSecretHandler(w http.ResponseWriter, r *http.Request) {
+	request := &sdk.SecretPutRequest{}
+	c, err := s.getClient(r, &request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+	defer c.Close()
+
+	response, err := c.Secrets().Update(request.ID, request.Key, request.Value, request.Note, request.OrganizationID, request.ProjectIDS)
+	if err != nil {
+		http.Error(w, "failed to update secret: "+err.Error(), http.StatusBadRequest)
 
 		return
 	}
