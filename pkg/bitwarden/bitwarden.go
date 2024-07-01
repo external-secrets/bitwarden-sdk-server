@@ -66,6 +66,9 @@ func setOrDefault(v, def string) string {
 	return def
 }
 
+// newBitwardenClientFn is used to overwrite how to initialize the bitwarden client.
+var newBitwardenClientFn = sdk.NewBitwardenClient
+
 // Login creates a session for further Bitwarden requests.
 // Note: I don't like returning the interface, but that's what
 // the client returns.
@@ -77,7 +80,7 @@ func Login(req *LoginRequest) (sdk.BitwardenClientInterface, error) {
 
 	// Client is closed in the calling handlers.
 	slog.Debug("constructed client with api and identity url", "api", apiURL, "identityUrl", identityURL, "statePath", statePath)
-	bitwardenClient, err := sdk.NewBitwardenClient(&apiURL, &identityURL)
+	bitwardenClient, err := newBitwardenClientFn(&apiURL, &identityURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client: %w", err)
 	}

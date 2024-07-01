@@ -57,10 +57,10 @@ func (s *Server) Run(_ context.Context) error {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Get("/ready", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/ready", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("ready"))
 	})
-	r.Get("/live", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/live", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("live"))
 	})
 

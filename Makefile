@@ -61,8 +61,8 @@ lint: golangci-lint ## Run golangci-lint.
 clean: ## Runs go clean
 	go clean -i
 
-test: ## Test the project
-	go test ./... -coverprofile cover.out
+test-ci: ## Test the project
+	CC=musl-gcc CGO_LDFLAGS="-lm" CGO_ENABLED=1 go test ./... -coverprofile cover.out
 
 .PHONY: prime-test-cluster
 prime-test-cluster: mkcert
