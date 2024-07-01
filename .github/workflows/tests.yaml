@@ -32,6 +32,8 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+      - name: Install musl tools
+        run: sudo apt install unzip musl-tools -y
       - name: Run lint
         run: make lint
       - name: Run tests
