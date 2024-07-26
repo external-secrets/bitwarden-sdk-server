@@ -44,6 +44,7 @@ jobs:
         with:
           tags: ghcr.io/external-secrets/bitwarden-sdk-server:${{ steps.prep.outputs.VERSION }}
           push: true
+          platforms: linux/amd64,linux/arm64
       - name: Install Helm
         uses: azure/setup-helm@v4
       - name: Build and release the helm charts
