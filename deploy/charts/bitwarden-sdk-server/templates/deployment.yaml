@@ -43,18 +43,20 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
-          {{- if not .Values.image.tls.enabled }}
           livenessProbe:
             httpGet:
               path: /live
               port: http
+              {{- if .Values.image.tls.enabled }}
               scheme: HTTPS
+              {{- end }}
           readinessProbe:
             httpGet:
               path: /ready
               port: http
+              {{- if .Values.image.tls.enabled }}
               scheme: HTTPS
-          {{- end }}
+              {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
