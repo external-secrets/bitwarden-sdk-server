@@ -68,6 +68,12 @@ test-ci: ## Test the project
 prime-test-cluster: mkcert
 	./hack/prime_test_cluster.sh
 
+helm-test:
+	@helm unittest --file tests/*.yaml --file 'tests/**/*.yaml' deploy/charts/bitwarden-sdk-server/
+
+helm-test-update:
+	@helm unittest -u --file tests/*.yaml --file 'tests/**/*.yaml' deploy/charts/bitwarden-sdk-server/
+
 ##@ Docker
 
 IMG ?= ghcr.io/external-secrets/bitwarden-sdk-server
