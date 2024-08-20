@@ -24,3 +24,6 @@ bin/
 dist/
 hack/cert-manager.yaml
 hack/rootCA.pem
+
+# Bitwarden state file
+.bitwarden-state
