@@ -35,6 +35,46 @@ Response:
 }
 ```
 
+### GetSecretsByIds
+
+`/rest/api/1/secrets-by-ids`
+
+Method `GET`.
+
+```json
+{
+  "ids": [
+    "f5847eef-2f89-43bc-885a-b18a01178e3e", "0cab75c4-ba26-4996-a8bf-517095857ce3"
+  ]
+}
+```
+
+Response:
+```json
+{
+  "data": [
+    {
+      "creationDate": "2024-04-04",
+      "id": "f5847eef-2f89-43bc-885a-b18a01178e3e",
+      "key": "test",
+      "note": "note",
+      "organizationId": "f5847eef-2f89-43bc-885a-b18a01178e3e",
+      "revisionDate": "2024-04-04",
+      "value": "value"
+    },
+    {
+      "creationDate": "2024-04-05",
+      "id": "0cab75c4-ba26-4996-a8bf-517095857ce3",
+      "key": "test2",
+      "note": "note2",
+      "organizationId": "f5847eef-2f89-43bc-885a-b18a01178e3e",
+      "revisionDate": "2024-04-05",
+      "value": "value2"
+    }
+  ]
+}
+```
+
 ### ListSecrets
 
 `/rest/api/1/secrets`
