@@ -3,7 +3,7 @@ module github.com/external-secrets/bitwarden-sdk-server
 go 1.22
 
 require (
-	github.com/bitwarden/sdk-go v0.1.1
+	github.com/bitwarden/sdk-go v1.0.0
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
