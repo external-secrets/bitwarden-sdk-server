@@ -56,6 +56,10 @@ func (t *testClient) Secrets() sdk.SecretsInterface {
 
 func (t *testClient) Close() {}
 
+func (t *testClient) Generators() sdk.GeneratorsInterface {
+	return nil
+}
+
 var testBitwardenClient = func(testClient *testClient) func(apiURL, identityURL *string) (sdk.BitwardenClientInterface, error) {
 	return func(apiURL, identityURL *string) (sdk.BitwardenClientInterface, error) {
 		return testClient, nil
