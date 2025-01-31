@@ -62,7 +62,7 @@ clean: ## Runs go clean
 	go clean -i
 
 test-ci: ## Test the project
-	CC=musl-gcc CGO_LDFLAGS="-lm" CGO_ENABLED=1 go test ./... -coverprofile cover.out
+	CC=musl-gcc CGO_ENABLED=1 go test ./... -coverprofile cover.out -ldflags '-linkmode external -extldflags "-static -Wl,-unresolved-symbols=ignore-all"'
 
 .PHONY: prime-test-cluster
 prime-test-cluster: mkcert
