@@ -33,7 +33,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - name: Install musl tools
-        run: sudo apt install unzip musl-tools -y
+        run: sudo apt install unzip musl-tools musl-dev -y
       - name: Install Helm
         uses: azure/setup-helm@v4
       - name: Install chart unittest
