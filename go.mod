@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/bitwarden/sdk-go v1.0.2
-	github.com/go-chi/chi/v5 v5.1.0
+	github.com/go-chi/chi/v5 v5.2.0
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.10.0
 )
