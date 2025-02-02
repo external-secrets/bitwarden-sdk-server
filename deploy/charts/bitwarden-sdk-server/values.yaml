@@ -30,6 +30,11 @@ imagePullSecrets: []
 nameOverride: "bitwarden-sdk-server"
 fullnameOverride: "bitwarden-sdk-server"
 
+# Use this to set Environment Variables e.g. HTTP_PROXY, HTTPS_PROXY
+extraEnv: {}
+  # - name: HTTP_PROXY
+  #   value: "http://example.com:8080/"
+
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
