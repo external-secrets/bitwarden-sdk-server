@@ -5,9 +5,8 @@ RUN mkdir state
 RUN apt update && apt install unzip musl-tools -y
 RUN make build-docker
 
-FROM alpine
+FROM ubuntu
 WORKDIR /
-RUN apk add -u ca-certificates
 COPY --from=build /workspace/bin/bitwarden-sdk-server .
 COPY --from=build --chown=65532:65532 /workspace/state/ ./state/
 
