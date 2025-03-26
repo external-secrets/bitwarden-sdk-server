@@ -7,6 +7,7 @@ RUN make build-docker
 
 FROM ubuntu
 WORKDIR /
+RUN apt-get update && apt-get install -y ca-certificates
 COPY --from=build /workspace/bin/bitwarden-sdk-server .
 COPY --from=build --chown=65532:65532 /workspace/state/ ./state/
 
