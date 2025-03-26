@@ -345,6 +345,42 @@ build the CGO library.
 
 Usage on the external-secrets side is documented under [Bitwarden Secrets Manager Provider](https://external-secrets.io/latest/provider/bitwarden-secrets-manager/).
 
+## Troubleshooting
+
+### DNS Issues and getting 400 from the SDK
+
+Using this server through external secrets there is a chance to receive something like this:
+```
+2025/03/26 09:16:24 "GET https://bitwarden-sdk-server.external-secrets.svc.cluster.local:9998/rest/api/1/secret HTTP/1.1" from 10.128.0.146:34830 - 400 154B in 5.601049ms
+2025/03/26 09:16:25 "GET https://bitwarden-sdk-server.external-secrets.svc.cluster.local:9998/rest/api/1/secret HTTP/1.1" from 10.128.0.146:34832 - 400 154B in 2.267271ms
+```
+
+There is not much coming from the SDK in terms of errors unfortunately, but once tried with CURL there is this distinct error:
+
+```
+/home/curl_user $ curl bitwarden.com
+curl: (6) Could not resolve host: bitwarden.com
+/home/curl_user $ curl api.bitwarden.com
+curl: (6) Could not resolve host: api.bitwarden.com
+```
+
+Or something akin to that.
+
+In this case, the solution is to put an extra `.` after the URLs like this:
+```yaml
+apiURL: https://vault.bitwarden.eu./api
+identityURL: https://vault.bitwarden.eu./identity
+```
+
+or
+
+```yaml
+apiURL: https://api.bitwarden.com.
+identityURL: https://identity.bitwarden.com.
+```
+
+This should then fix the problem.
+
 ## License
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fexternal-secrets%2Fbitwarden-sdk-server.svg?type=large&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Fexternal-secrets%2Fbitwarden-sdk-server?ref=badge_large&issueType=license)
