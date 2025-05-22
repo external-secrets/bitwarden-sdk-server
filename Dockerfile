@@ -3,12 +3,12 @@ WORKDIR /workspace
 COPY . .
 RUN mkdir state
 RUN apt update && apt install unzip musl-tools ca-certificates -y
+RUN update-ca-certificates
 RUN make build-docker
 
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
-# RUN apt-get update && apt-get install -y ca-certificates
-COPY --from=build /etc/ssl/certs /etc/ssl/certs
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=build /workspace/bin/bitwarden-sdk-server .
 COPY --from=build --chown=65532:65532 /workspace/state/ ./state/
 

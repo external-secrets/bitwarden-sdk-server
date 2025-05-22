@@ -1,4 +1,4 @@
-FROM ubuntu@sha256:72297848456d5d37d1262630108ab308d3e9ec7ed1c3286a32fe09856619a782
+FROM alpine@sha256:77726ef6b57ddf65bb551896826ec38bc3e53f75cdde31354fbffb4f25238ebd
 WORKDIR /
 COPY ./bin/bitwarden-sdk-server /bitwarden-sdk-server
 
