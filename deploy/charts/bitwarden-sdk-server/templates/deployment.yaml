@@ -25,6 +25,13 @@ spec:
       serviceAccountName: {{ include "bitwarden-sdk-server.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.podDnsPolicy }}
+      dnsPolicy: {{ .Values.podDnsPolicy }}
+      {{- end }}
+      {{- with .Values.podDnsConfig }}
+      dnsConfig:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           {{- if not .Values.image.tls.enabled }}
