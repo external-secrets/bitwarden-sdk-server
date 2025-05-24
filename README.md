@@ -381,6 +381,14 @@ identityURL: https://identity.bitwarden.com.
 
 This should then fix the problem.
 
+#### Deployments using Helm
+
+If you have deployed `bitwarden-sdk-server` using helm, you can set the value
+`podDnsConfig`, specifically setting `ndots` to `2` will prevent this problem
+from happening.
+
+Please see the [Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/) for more details
+
 ## License
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fexternal-secrets%2Fbitwarden-sdk-server.svg?type=large&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Fexternal-secrets%2Fbitwarden-sdk-server?ref=badge_large&issueType=license)

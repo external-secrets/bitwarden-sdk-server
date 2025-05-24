@@ -44,6 +44,19 @@ serviceAccount:
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
+podDnsPolicy: ""
+
+podDnsConfig: {}
+  # nameservers:
+  #   - 192.0.2.1
+  # searches:
+  #   - ns1.svc.cluster-domain.example
+  #   - my.dns.search.suffix
+  # options:
+  #   - name: ndots
+  #     value: "2"
+  #   - name: edns0
+
 podAnnotations: {}
 
 podSecurityContext: {}
