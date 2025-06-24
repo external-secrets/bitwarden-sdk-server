@@ -10,6 +10,7 @@ deployment should match snapshot:
         app.kubernetes.io/version: 1.16.0
         helm.sh/chart: bitwarden-sdk-server-0.1.0
       name: bitwarden-sdk-server
+      namespace: NAMESPACE
     spec:
       replicas: 1
       selector:
