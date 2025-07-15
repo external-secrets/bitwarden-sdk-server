@@ -59,6 +59,7 @@ podDnsConfig: {}
   #   - name: edns0
 
 podAnnotations: {}
+deploymentAnnotations: {}
 
 podSecurityContext: {}
   # fsGroup: 2000

@@ -3,6 +3,10 @@ kind: Deployment
 metadata:
   name: {{ include "bitwarden-sdk-server.fullname" . }}
   namespace: {{ template "bitwarden-sdk-server.namespace" . }}
+  {{- with .Values.deploymentAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   labels:
     {{- include "bitwarden-sdk-server.labels" . | nindent 4 }}
 spec:
