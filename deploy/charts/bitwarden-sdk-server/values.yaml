@@ -11,20 +11,8 @@ image:
   tag: ""
   tls:
     enabled: true
-    volumeMounts:
-      - mountPath: "/certs"
-        name: "bitwarden-tls-certs"
-    volumes:
-      - name: "bitwarden-tls-certs"
-        secret:
-          secretName: "bitwarden-tls-certs"
-          items:
-            - key: "tls.crt"
-              path: "cert.pem"
-            - key: "tls.key"
-              path: "key.pem"
-            - key: "ca.crt"
-              path: "ca.pem"
+    # Name of the secret that contains the TLS cert
+    secret: bitwarden-tls-certs
 
 imagePullSecrets: []
 nameOverride: "bitwarden-sdk-server"

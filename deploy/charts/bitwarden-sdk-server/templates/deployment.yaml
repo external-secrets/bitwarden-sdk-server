@@ -53,7 +53,8 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           {{- if .Values.image.tls.enabled }}
           volumeMounts:
-          {{- toYaml .Values.image.tls.volumeMounts | nindent 10 }}
+            - mountPath: /certs
+              name: {{ .Values.image.tls.secret }}
           {{- end}}
           ports:
             - name: http
@@ -89,5 +90,14 @@ spec:
       {{- end }}
       {{- if .Values.image.tls.enabled }}
       volumes:
-      {{- toYaml .Values.image.tls.volumes | nindent 8 }}
+        - name: {{ .Values.image.tls.secret }}
+          secret:
+            secretName: {{ .Values.image.tls.secret }}
+            items:
+              - key: tls.crt
+                path: cert.pem
+              - key: tls.key
+                path: key.pem
+              - key: ca.crt
+                path: ca.pem
       {{- end}}
