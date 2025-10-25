@@ -11,8 +11,12 @@ image:
   tag: ""
   tls:
     enabled: true
-    # Name of the secret that contains the TLS cert
-    secret: bitwarden-tls-certs
+    # Name of the secret that contains the TLS cert. Ignored when `image.tls.volumes` is set
+    secretName: bitwarden-tls-certs
+    # Use this to override the default volumes
+    volumes: []
+    # Use this to override the default volume mounts
+    volumeMounts: []
 
 imagePullSecrets: []
 nameOverride: "bitwarden-sdk-server"
