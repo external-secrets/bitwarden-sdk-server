@@ -125,6 +125,7 @@ func Warden(next http.Handler) http.Handler {
 
 			return
 		}
+		defer client.Close()
 
 		ctx := context.WithValue(r.Context(), ContextClientKey, client)
 		next.ServeHTTP(w, r.WithContext(ctx))

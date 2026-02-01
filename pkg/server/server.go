@@ -100,7 +100,6 @@ func (s *Server) getSecretHandler(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-	defer c.Close()
 
 	secretResponse, err := c.Secrets().Get(request.ID)
 	if err != nil {
@@ -120,7 +119,6 @@ func (s *Server) getByIdsSecretHandler(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-	defer c.Close()
 
 	secretResponse, err := c.Secrets().GetByIDS(request.IDS)
 	if err != nil {
@@ -140,7 +138,6 @@ func (s *Server) listSecretsHandler(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-	defer c.Close()
 
 	secretResponse, err := c.Secrets().List(request.OrganizationID)
 	if err != nil {
@@ -160,7 +157,6 @@ func (s *Server) deleteSecretHandler(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-	defer c.Close()
 
 	response, err := c.Secrets().Delete(request.IDS)
 	if err != nil {
@@ -180,7 +176,6 @@ func (s *Server) createSecretHandler(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-	defer c.Close()
 
 	response, err := c.Secrets().Create(request.Key, request.Value, request.Note, request.OrganizationID, request.ProjectIDS)
 	if err != nil {
@@ -200,7 +195,6 @@ func (s *Server) updateSecretHandler(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-	defer c.Close()
 
 	response, err := c.Secrets().Update(request.ID, request.Key, request.Value, request.Note, request.OrganizationID, request.ProjectIDS)
 	if err != nil {
