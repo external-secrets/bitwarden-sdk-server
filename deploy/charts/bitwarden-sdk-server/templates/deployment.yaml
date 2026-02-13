@@ -9,6 +9,9 @@ metadata:
   {{- end }}
   labels:
     {{- include "bitwarden-sdk-server.labels" . | nindent 4 }}
+    {{- with .Values.deploymentLabels }}
+    {{- toYaml .  | nindent 4 }}
+    {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -22,6 +25,9 @@ spec:
       {{- end }}
       labels:
         {{- include "bitwarden-sdk-server.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
