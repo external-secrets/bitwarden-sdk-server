@@ -28,9 +28,14 @@ extraEnv: {}
   # - name: HTTP_PROXY
   #   value: "http://example.com:8080/"
 
+# Additional labels to add to all chart resources
+commonLabels: {}
+
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
+  # Labels to add to the service account
+  labels: {}
   # Annotations to add to the service account
   annotations: {}
   # The name of the service account to use.
@@ -50,6 +55,9 @@ podDnsConfig: {}
   #     value: "2"
   #   - name: edns0
 
+podLabels: {}
+deploymentLabels: {}
+
 podAnnotations: {}
 deploymentAnnotations: {}
 
@@ -67,6 +75,10 @@ securityContext: {}
 service:
   type: ClusterIP
   port: 9998
+  # Labels to add to the service
+  labels: {}
+  # Annotations to add to the service
+  annotations: {}
 
 ingress:
   enabled: false
