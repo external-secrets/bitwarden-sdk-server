@@ -2,8 +2,10 @@ module github.com/external-secrets/bitwarden-sdk-server
 
 go 1.22
 
+replace github.com/bitwarden/sdk-go/v2 => github.com/Skarlso/sdk-go/v2 v2.0.0
+
 require (
-	github.com/bitwarden/sdk-go v1.0.2
+	github.com/bitwarden/sdk-go/v2 v2.0.0
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1

@@ -20,7 +20,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/bitwarden/sdk-go"
+	"github.com/bitwarden/sdk-go/v2"
 )
 
 type contextKey string
