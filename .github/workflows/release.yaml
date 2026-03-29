@@ -46,7 +46,7 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
       - name: Install Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
       - name: Build and release the helm charts
         run: |
           helm registry login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
