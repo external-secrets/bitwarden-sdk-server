@@ -27,3 +27,6 @@ hack/rootCA.pem
 
 # Bitwarden state file
 .bitwarden-state
+
+# delve debug files
+__debug_*
