@@ -24,3 +24,13 @@ break funcs listSecretsHandler
 # and start code execution
 continue
 ````
+
+## Unit Tests
+
+````bash
+# run test suite
+make test-ci
+
+# if you're on mac run
+CGO_LDFLAGS="-framework CoreFoundation" CGO_ENABLED=1 go test ./... -coverprofile cover.out
+````
