@@ -15,5 +15,4 @@ How do you like to solve the issue and why?
 - [ ] I have read the [contribution guidelines](https://external-secrets.io/latest/contributing/process/#submitting-a-pull-request)
 - [ ] All commits are signed with `git commit --signoff`
 - [ ] My changes have reasonable test coverage
-- [ ] All tests pass with `make test`
-- [ ] I ensured my PR is ready for review with `make reviewable`
+- [ ] All tests pass with `make test-ci`
