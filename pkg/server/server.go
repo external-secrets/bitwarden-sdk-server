@@ -211,7 +211,9 @@ func (s *Server) getClient(r *http.Request, response any) (sdk.BitwardenClientIn
 	if err != nil {
 		return nil, err
 	}
-	defer r.Body.Close()
+	defer func() {
+		_ = r.Body.Close()
+	}()
 
 	if err := json.Unmarshal(content, response); err != nil {
 		return nil, err
