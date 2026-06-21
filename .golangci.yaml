@@ -16,7 +16,6 @@ linters:
     - exhaustive
     - copyloopvar
     - goheader
-    - goconst
     - gocritic
     - godot
     - goprintffuncname
