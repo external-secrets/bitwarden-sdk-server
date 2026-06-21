@@ -33,7 +33,7 @@ endif
 
 # List the GOOS and GOARCH to build
 GO_LDFLAGS_STATIC="-s -w $(CTIMEVAR) -extldflags -static"
-GOLANGCI_LINT_VERSION ?= v2.11.3
+GOLANGCI_LINT_VERSION ?= v2.12.2
 MKCERT_VERSION ?= v1.4.4
 
 .DEFAULT_GOAL := help
@@ -87,7 +87,7 @@ docker_image: ## Creates a docker image. Requires `image` and `version` variable
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT)
 $(GOLANGCI_LINT): $(LOCALBIN)
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s $(GOLANGCI_LINT_VERSION)
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/main/install.sh | sh -s $(GOLANGCI_LINT_VERSION)
 
 help:  ## Display this help. Thanks to https://www.thapaliya.com/en/writings/well-documented-makefiles/
 ifeq ($(OS),Windows_NT)
