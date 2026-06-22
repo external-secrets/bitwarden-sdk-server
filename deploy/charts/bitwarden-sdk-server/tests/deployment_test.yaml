@@ -27,3 +27,14 @@ tests:
       - equal:
           path: spec.template.spec.dnsConfig.options[0].value
           value: "2"
+  - it: Should not have Priority Class Name set by default
+    asserts:
+      - notExists:
+          path: spec.template.spec.priorityClassName
+  - it: Should have Priority Class Name set when configured
+    set:
+      priorityClassName: "system-cluster-critical"
+    asserts:
+      - equal:
+          path: spec.template.spec.priorityClassName
+          value: "system-cluster-critical"

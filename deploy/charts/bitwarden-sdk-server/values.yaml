@@ -60,6 +60,7 @@ deploymentLabels: {}
 
 podAnnotations: {}
 deploymentAnnotations: {}
+priorityClassName: ""
 
 podSecurityContext: {}
   # fsGroup: 2000
