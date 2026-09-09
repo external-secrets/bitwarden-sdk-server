@@ -25,6 +25,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"os"
+	"path/filepath"
 )
 
 // This is a valid test token that has been generated and then revoked. The important
@@ -103,4 +105,83 @@ func TestWardenWithToken(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "test", string(content))
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+// recordingClient captures the state path the SDK is asked to use.
+type recordingClient struct {
+	testClient
+
+	statePath string
+}
+
+func (r *recordingClient) AccessTokenLogin(_ string, statePath *string) error {
+	if statePath != nil {
+		r.statePath = *statePath
+	}
+
+	return nil
+}
+
+func TestLoginDefaultStatePathIsAbsoluteAndWritable(t *testing.T) {
+	// The published image runs as a non-root uid with WorkingDir "/", so a
+	// relative default resolved to a path that uid cannot write. The SDK does
+	// not report that, it just never caches the token, and every request logs
+	// in again until Bitwarden answers 429 (issue #91).
+	prevBitwardenClient := newBitwardenClientFn
+	defer func() { newBitwardenClientFn = prevBitwardenClient }()
+
+	recorder := &recordingClient{}
+	newBitwardenClientFn = func(apiURL, identityURL *string) (sdk.BitwardenClientInterface, error) {
+		return recorder, nil
+	}
+
+	if _, err := Login(&LoginRequest{RequestBase: &RequestBase{}, AccessToken: testToken}); err != nil {
+		t.Fatalf("Login() error = %v", err)
+	}
+
+	if !filepath.IsAbs(recorder.statePath) {
+		t.Errorf("default state path %q is relative, so it resolves against the working directory", recorder.statePath)
+	}
+
+	if err := stateDirWritable(recorder.statePath); err != nil {
+		t.Errorf("default state path %q is not writable: %v", recorder.statePath, err)
+	}
+}
+
+func TestLoginKeepsAnExplicitStatePath(t *testing.T) {
+	// The Warden-State-Path header still wins, which is how a caller points the
+	// state file at a mounted volume.
+	prevBitwardenClient := newBitwardenClientFn
+	defer func() { newBitwardenClientFn = prevBitwardenClient }()
+
+	recorder := &recordingClient{}
+	newBitwardenClientFn = func(apiURL, identityURL *string) (sdk.BitwardenClientInterface, error) {
+		return recorder, nil
+	}
+
+	want := filepath.Join(t.TempDir(), "state")
+	if _, err := Login(&LoginRequest{RequestBase: &RequestBase{}, AccessToken: testToken, StatePath: want}); err != nil {
+		t.Fatalf("Login() error = %v", err)
+	}
+
+	if recorder.statePath != want {
+		t.Errorf("state path = %q, want %q", recorder.statePath, want)
+	}
+}
+
+func TestStateDirWritableReportsAnUnwritableDirectory(t *testing.T) {
+	// The guard that turns the silent failure into a warning.
+	dir := t.TempDir()
+	if err := os.Chmod(dir, 0o500); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	defer func() { _ = os.Chmod(dir, 0o700) }()
+
+	if os.Geteuid() == 0 {
+		t.Skip("running as root, which can write a read-only directory")
+	}
+
+	if err := stateDirWritable(filepath.Join(dir, ".bitwarden-state")); err == nil {
+		t.Error("stateDirWritable() = nil, want an error for a read-only directory")
+	}
 }

@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/bitwarden/sdk-go/v2"
 )
@@ -31,7 +33,12 @@ var ContextClientKey contextKey = "warden-client"
 const (
 	defaultAPIURL      = "https://api.bitwarden.com"
 	defaultIdentityURL = "https://identity.bitwarden.com"
-	defaultStatePath   = ".bitwarden-state"
+	// stateFileName is joined onto a writable directory, never used on its own.
+	// A bare relative name resolves against the working directory, which is "/"
+	// in the published image and not writable by the non-root uid it runs as, so
+	// the SDK could not persist a state file and every request re-authenticated
+	// against identity.bitwarden.com (issue #91).
+	stateFileName = ".bitwarden-state"
 )
 
 // Defined Header Keys.
@@ -57,6 +64,33 @@ type LoginRequest struct {
 	StatePath   string `yaml:"statePath,omitempty"`
 }
 
+// defaultStatePath returns an absolute state-file path in a directory the
+// process can write. It is resolved per call rather than held in a constant so
+// TMPDIR is honoured.
+func defaultStatePath() string {
+	return filepath.Join(os.TempDir(), stateFileName)
+}
+
+// stateDirWritable reports whether the state file's directory can be written,
+// by creating and removing a probe file. The Bitwarden SDK does not surface a
+// failure to persist state: it logs in successfully and simply does not cache
+// the token, so without this check the only symptom is the rate limiting that
+// shows up later under load.
+func stateDirWritable(statePath string) error {
+	dir := filepath.Dir(statePath)
+	probe, err := os.CreateTemp(dir, ".bitwarden-state-probe-*")
+	if err != nil {
+		return err
+	}
+
+	name := probe.Name()
+	if err := probe.Close(); err != nil {
+		return err
+	}
+
+	return os.Remove(name)
+}
+
 // setOrDefault returns a value if not empty, otherwise a default.
 func setOrDefault(v, def string) string {
 	if v != "" {
@@ -76,7 +110,14 @@ func Login(req *LoginRequest) (sdk.BitwardenClientInterface, error) {
 	// Configuring the URLS is optional, set them to nil to use the default values
 	apiURL := setOrDefault(req.APIURL, defaultAPIURL)
 	identityURL := setOrDefault(req.IdentityURL, defaultIdentityURL)
-	statePath := setOrDefault(req.StatePath, defaultStatePath)
+	statePath := setOrDefault(req.StatePath, defaultStatePath())
+	if err := stateDirWritable(statePath); err != nil {
+		slog.Warn(
+			"bitwarden state file is not writable, so every request will "+
+				"re-authenticate and may be rate limited",
+			"statePath", statePath, "error", err,
+		)
+	}
 
 	// Client is closed in the calling handlers.
 	slog.Debug("constructed client with api and identity url", "api", apiURL, "identityUrl", identityURL, "statePath", statePath)
