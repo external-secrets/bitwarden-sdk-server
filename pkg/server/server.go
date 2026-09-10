@@ -40,6 +40,12 @@ type Config struct {
 	Addr     string
 	KeyFile  string
 	CertFile string
+	// StatePath is the file the BitWarden SDK persists its session into.
+	// Empty disables persistence and re-authenticates on every request.
+	StatePath string
+	// StatePathExplicit reports whether StatePath was asked for rather than defaulted,
+	// which decides between failing and falling back to a stateless session.
+	StatePathExplicit bool
 }
 
 // Server defines a server which runs and accepts requests.
@@ -54,6 +60,11 @@ func NewServer(cfg Config) *Server {
 }
 
 func (s *Server) Run(_ context.Context) error {
+	statePath, err := s.resolveStatePath()
+	if err != nil {
+		return err
+	}
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -65,7 +76,7 @@ func (s *Server) Run(_ context.Context) error {
 	})
 
 	warden := chi.NewRouter()
-	warden.Use(bitwarden.Warden)
+	warden.Use(bitwarden.NewWarden(statePath))
 
 	// The header will always contain the right credentials.
 	warden.Get("/secret", s.getSecretHandler)
@@ -88,13 +99,36 @@ func (s *Server) Run(_ context.Context) error {
 	return srv.ListenAndServeTLS(s.CertFile, s.KeyFile)
 }
 
+// resolveStatePath verifies the state path is usable. An explicitly requested path that
+// cannot be written is an error.
+func (s *Server) resolveStatePath() (string, error) {
+	if s.StatePath == "" {
+		slog.Warn("BitWarden session state is disabled")
+
+		return "", nil
+	}
+
+	if err := bitwarden.EnsureStatePath(s.StatePath); err != nil {
+		if s.StatePathExplicit {
+			return "", err
+		}
+
+		slog.Warn("BitWarden session state is unavailable", "path", s.StatePath, "error", err)
+
+		return "", nil
+	}
+
+	slog.Info("persisting BitWarden session state", "path", s.StatePath)
+
+	return s.StatePath, nil
+}
+
 func (s *Server) Shutdown(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
 func (s *Server) getSecretHandler(w http.ResponseWriter, r *http.Request) {
-	request := &sdk.SecretGetRequest{}
-	c, err := s.getClient(r, &request)
+	c, request, err := s.getClient[*sdk.SecretGetRequest](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
@@ -112,8 +146,7 @@ func (s *Server) getSecretHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getByIdsSecretHandler(w http.ResponseWriter, r *http.Request) {
-	request := &sdk.SecretsGetRequest{}
-	c, err := s.getClient(r, &request)
+	c, request, err := s.getClient[*sdk.SecretsGetRequest](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
@@ -131,8 +164,7 @@ func (s *Server) getByIdsSecretHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) listSecretsHandler(w http.ResponseWriter, r *http.Request) {
-	request := &sdk.SecretIdentifiersRequest{}
-	c, err := s.getClient(r, &request)
+	c, request, err := s.getClient[*sdk.SecretIdentifiersRequest](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
@@ -150,86 +182,84 @@ func (s *Server) listSecretsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) deleteSecretHandler(w http.ResponseWriter, r *http.Request) {
-	request := &sdk.SecretsDeleteRequest{}
-	c, err := s.getClient(r, &request)
+	c, request, err := s.getClient[*sdk.SecretsDeleteRequest](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 
 		return
 	}
 
-	response, err := c.Secrets().Delete(request.IDS)
+	deleteResponse, err := c.Secrets().Delete(request.IDS)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 
 		return
 	}
 
-	s.handleResponse(response, w)
+	s.handleResponse(deleteResponse, w)
 }
 
 func (s *Server) createSecretHandler(w http.ResponseWriter, r *http.Request) {
-	request := &sdk.SecretCreateRequest{}
-	c, err := s.getClient(r, &request)
+	c, request, err := s.getClient[*sdk.SecretCreateRequest](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 
 		return
 	}
 
-	response, err := c.Secrets().Create(request.Key, request.Value, request.Note, request.OrganizationID, request.ProjectIDS)
+	createResponse, err := c.Secrets().Create(request.Key, request.Value, request.Note, request.OrganizationID, request.ProjectIDS)
 	if err != nil {
 		http.Error(w, "failed to create secret: "+err.Error(), http.StatusBadRequest)
 
 		return
 	}
 
-	s.handleResponse(response, w)
+	s.handleResponse(createResponse, w)
 }
 
 func (s *Server) updateSecretHandler(w http.ResponseWriter, r *http.Request) {
-	request := &sdk.SecretPutRequest{}
-	c, err := s.getClient(r, &request)
+	c, request, err := s.getClient[*sdk.SecretPutRequest](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 
 		return
 	}
 
-	response, err := c.Secrets().Update(request.ID, request.Key, request.Value, request.Note, request.OrganizationID, request.ProjectIDS)
+	updateResponse, err := c.Secrets().Update(request.ID, request.Key, request.Value, request.Note, request.OrganizationID, request.ProjectIDS)
 	if err != nil {
 		http.Error(w, "failed to update secret: "+err.Error(), http.StatusBadRequest)
 
 		return
 	}
 
-	s.handleResponse(response, w)
+	s.handleResponse(updateResponse, w)
 }
 
-func (s *Server) getClient(r *http.Request, response any) (sdk.BitwardenClientInterface, error) {
+func (s *Server) getClient[R any](r *http.Request) (sdk.BitwardenClientInterface, R, error) {
+	request := new(R)
 	content, err := io.ReadAll(r.Body)
 	if err != nil {
-		return nil, err
+		return nil, *request, err
 	}
 	defer func() {
 		_ = r.Body.Close()
 	}()
 
-	if err := json.Unmarshal(content, response); err != nil {
-		return nil, err
+	if err := json.Unmarshal(content, request); err != nil {
+		return nil, *request, err
 	}
 
 	client := r.Context().Value(bitwarden.ContextClientKey)
 	if client == nil {
-		return nil, errors.New("missing client in context, login error")
+		return nil, *request, errors.New("missing client in context, login error")
 	}
 
 	c, ok := client.(sdk.BitwardenClientInterface)
 	if !ok {
-		return nil, errors.New("invalid client in context, login error")
+		return nil, *request, errors.New("invalid client in context, login error")
 	}
 
-	return c, nil
+	return c, *request, nil
 }
 
 func (s *Server) handleResponse(response any, w http.ResponseWriter) {

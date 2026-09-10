@@ -21,6 +21,8 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -487,8 +489,7 @@ func TestGetClient(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/", bytes.NewBufferString(tt.body))
 			req = req.WithContext(tt.ctx)
 
-			var resp sdk.SecretGetRequest
-			client, err := s.getClient(req, &resp)
+			client, _, err := s.getClient[*sdk.SecretGetRequest](req)
 
 			if tt.expectError {
 				require.Error(t, err)
@@ -608,4 +609,42 @@ func TestHandlerWithNoClientInContext(t *testing.T) {
 			assert.True(t, w.Code >= 400)
 		})
 	}
+}
+
+func TestResolveStatePath(t *testing.T) {
+	t.Run("explicit path that cannot be written is fatal", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.Chmod(dir, 0o500))
+		t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+
+		s := NewServer(Config{StatePath: filepath.Join(dir, "nested", ".bitwarden-state"), StatePathExplicit: true})
+		_, err := s.resolveStatePath()
+		require.Error(t, err)
+	})
+
+	t.Run("defaulted path that cannot be written falls back to stateless", func(t *testing.T) {
+		dir := t.TempDir()
+		require.NoError(t, os.Chmod(dir, 0o500))
+		t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+
+		s := NewServer(Config{StatePath: filepath.Join(dir, "nested", ".bitwarden-state")})
+		statePath, err := s.resolveStatePath()
+		require.NoError(t, err)
+		assert.Empty(t, statePath)
+	})
+
+	t.Run("empty path is stateless without probing", func(t *testing.T) {
+		s := NewServer(Config{})
+		statePath, err := s.resolveStatePath()
+		require.NoError(t, err)
+		assert.Empty(t, statePath)
+	})
+
+	t.Run("writable path is used", func(t *testing.T) {
+		want := filepath.Join(t.TempDir(), ".bitwarden-state")
+		s := NewServer(Config{StatePath: want, StatePathExplicit: true})
+		statePath, err := s.resolveStatePath()
+		require.NoError(t, err)
+		assert.Equal(t, want, statePath)
+	})
 }

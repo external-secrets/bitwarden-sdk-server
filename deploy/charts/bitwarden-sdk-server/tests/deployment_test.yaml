@@ -27,3 +27,63 @@ tests:
       - equal:
           path: spec.template.spec.dnsConfig.options[0].value
           value: "2"
+  - it: Should pass the state path to the server and mount its parent directory
+    set:
+      state.path: /tmp/writeable/.bitwarden-state
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --state-path=/tmp/writeable/.bitwarden-state
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /tmp/writeable
+            name: bitwarden-state
+  - it: Should mount the state volume when TLS is disabled
+    set:
+      image.tls.enabled: false
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: bitwarden-state
+            emptyDir: {}
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --insecure
+  - it: Should allow overriding the state volume
+    set:
+      state.volume:
+        persistentVolumeClaim:
+          claimName: bitwarden-state
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: bitwarden-state
+            persistentVolumeClaim:
+              claimName: bitwarden-state
+  - it: Should omit the state volume when only the volume is disabled
+    set:
+      state.mountVolume: false
+      image.tls.enabled: false
+    asserts:
+      - notExists:
+          path: spec.template.spec.volumes
+      - notExists:
+          path: spec.template.spec.containers[0].volumeMounts
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --state-path=/state/.bitwarden-state
+  - it: Should disable session persistence entirely
+    set:
+      state.enabled: false
+      image.tls.enabled: false
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --state-path=
+      - notExists:
+          path: spec.template.spec.volumes
+      - notExists:
+          path: spec.template.spec.containers[0].volumeMounts

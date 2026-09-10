@@ -45,10 +45,11 @@ spec:
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
-          {{- if not .Values.image.tls.enabled }}
           args:
+            {{- if not .Values.image.tls.enabled }}
             - --insecure
-          {{- end }}
+            {{- end }}
+            - --state-path={{ if .Values.state.enabled }}{{ .Values.state.path }}{{ end }}
           {{- with .Values.extraEnv }}
           env:
             {{- toYaml . | nindent 12 }}
@@ -57,15 +58,21 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{- if .Values.image.tls.enabled }}
+          {{- if or .Values.image.tls.enabled (and .Values.state.enabled .Values.state.mountVolume) }}
           volumeMounts:
+          {{- if .Values.image.tls.enabled }}
           {{- if .Values.image.tls.volumeMounts }}
           {{- toYaml .Values.image.tls.volumeMounts | nindent 12 }}
           {{- else }}
             - mountPath: /certs
               name: {{ .Values.image.tls.secretName }}
-          {{- end}}
-          {{- end}}
+          {{- end }}
+          {{- end }}
+          {{- if (and .Values.state.enabled .Values.state.mountVolume) }}
+            - mountPath: {{ dir .Values.state.path }}
+              name: bitwarden-state
+          {{- end }}
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
@@ -98,8 +105,9 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if .Values.image.tls.enabled }}
+      {{- if or .Values.image.tls.enabled (and .Values.state.enabled .Values.state.mountVolume) }}
       volumes:
+      {{- if .Values.image.tls.enabled }}
       {{- if .Values.image.tls.volumes }}
       {{- toYaml .Values.image.tls.volumes | nindent 8 }}
       {{- else }}
@@ -113,5 +121,14 @@ spec:
                 path: key.pem
               - key: ca.crt
                 path: ca.pem
-      {{- end}}
-      {{- end}}
+      {{- end }}
+      {{- end }}
+      {{- if (and .Values.state.enabled .Values.state.mountVolume) }}
+        - name: bitwarden-state
+          {{- if .Values.state.volume }}
+          {{- toYaml .Values.state.volume | nindent 10 }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+      {{- end }}
+      {{- end }}

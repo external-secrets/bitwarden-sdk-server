@@ -18,6 +18,19 @@ image:
     # Use this to override the default volume mounts
     volumeMounts: []
 
+# Where the BitWarden SDK persists its session state. Without it every request
+# re-authenticates and BitWarden starts answering 429.
+state:
+  # Set to `false` to re-authenticate on every request instead of persisting a session.
+  enabled: true
+  # Full path to the state file. Its parent directory is where the volume is mounted.
+  path: /state/.bitwarden-state
+  # Set to `false` to write into the container filesystem instead of a mounted volume.
+  # Requires a writable root filesystem.
+  mountVolume: true
+  # Overrides the default emptyDir volume, e.g. to use a PVC.
+  volume: {}
+
 imagePullSecrets: []
 nameOverride: "bitwarden-sdk-server"
 fullnameOverride: "bitwarden-sdk-server"

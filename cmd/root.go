@@ -26,6 +26,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/external-secrets/bitwarden-sdk-server/pkg/bitwarden"
 	"github.com/external-secrets/bitwarden-sdk-server/pkg/server"
 )
 
@@ -49,22 +50,32 @@ func init() {
 	flag.StringVar(&rootArgs.server.KeyFile, "key-file", "/certs/key.pem", "--key-file /certs/key.pem")
 	flag.StringVar(&rootArgs.server.CertFile, "cert-file", "/certs/cert.pem", "--cert-file /certs/cert.pem")
 	flag.StringVar(&rootArgs.server.Addr, "hostname", ":9998", "--hostname :9998")
+	flag.StringVar(&rootArgs.server.StatePath, "state-path", bitwarden.DefaultStatePath, "--state-path "+bitwarden.DefaultStatePath+" (empty disables session persistence)")
 }
 
 const timeout = 15 * time.Second
 
-func runServeCmd(_ *cobra.Command, _ []string) error {
+func runServeCmd(cmd *cobra.Command, _ []string) error {
+	rootArgs.server.StatePathExplicit = cmd.Flags().Changed("state-path")
+
 	svr := server.NewServer(rootArgs.server)
+	errorChannel := make(chan error, 1)
 	go func() {
 		if err := svr.Run(context.Background()); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("server stopped unexpectedly", "error", err)
+			errorChannel <- err
 		}
 	}()
 
 	interruptChannel := make(chan os.Signal, 2)
 	signal.Notify(interruptChannel, os.Interrupt, syscall.SIGTERM)
 
-	<-interruptChannel
+	// A server that never came up must exit non-zero, otherwise the pod sits there healthy-looking.
+	select {
+	case err := <-errorChannel:
+		return err
+	case <-interruptChannel:
+	}
+
 	done := make(chan struct{})
 	// start the timer for the shutdown sequence
 	go func() {

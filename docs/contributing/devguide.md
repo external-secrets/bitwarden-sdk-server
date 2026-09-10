@@ -16,7 +16,7 @@ go mod tidy
 go run main.go serve --insecure --hostname :9998 --debug
 
 # alternatively you can launch the server with the delve debugger:
-go install github.com/go-delve/delve/cmd/dlv@v1.26.1
+go install github.com/go-delve/delve/cmd/dlv@v1.27.1
 
 dlv debug main.go -- serve --insecure --hostname :9998 --debug
 # optionally set a breakpoint at a given function

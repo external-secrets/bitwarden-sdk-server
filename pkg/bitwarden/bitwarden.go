@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/bitwarden/sdk-go/v2"
 )
@@ -31,8 +33,11 @@ var ContextClientKey contextKey = "warden-client"
 const (
 	defaultAPIURL      = "https://api.bitwarden.com"
 	defaultIdentityURL = "https://identity.bitwarden.com"
-	defaultStatePath   = ".bitwarden-state"
 )
+
+// DefaultStatePath uses distroless nonroot image's /home/nonroot as 0700 owned by uid 65532.
+// This is writable without a volume being mounted normally. So, we assume that as default.
+const DefaultStatePath = "/home/nonroot/.bitwarden-state"
 
 // Defined Header Keys.
 const (
@@ -72,11 +77,17 @@ var newBitwardenClientFn = sdk.NewBitwardenClient
 // Login creates a session for further Bitwarden requests.
 // Note: I don't like returning the interface, but that's what
 // the client returns.
-func Login(req *LoginRequest) (sdk.BitwardenClientInterface, error) {
+func Login(req *LoginRequest, statePathDefault string) (sdk.BitwardenClientInterface, error) {
 	// Configuring the URLS is optional, set them to nil to use the default values
 	apiURL := setOrDefault(req.APIURL, defaultAPIURL)
 	identityURL := setOrDefault(req.IdentityURL, defaultIdentityURL)
-	statePath := setOrDefault(req.StatePath, defaultStatePath)
+	statePath := setOrDefault(req.StatePath, statePathDefault)
+
+	// A nil state path tells the SDK to keep the session in memory only.
+	var state *string
+	if statePath != "" {
+		state = new(statePath)
+	}
 
 	// Client is closed in the calling handlers.
 	slog.Debug("constructed client with api and identity url", "api", apiURL, "identityUrl", identityURL, "statePath", statePath)
@@ -85,14 +96,14 @@ func Login(req *LoginRequest) (sdk.BitwardenClientInterface, error) {
 		return nil, fmt.Errorf("failed to create client: %w", err)
 	}
 
-	if err := bitwardenClient.AccessTokenLogin(req.AccessToken, &statePath); err != nil {
+	if err := bitwardenClient.AccessTokenLogin(req.AccessToken, state); err != nil {
 		return nil, fmt.Errorf("bitwarden login: %w", err)
 	}
 
 	return bitwardenClient, nil
 }
 
-// Warden is a middleware to use with the bitwarden API.
+// NewWarden builds a middleware to use with the BitWarden API.
 // Header used by the Warden:
 // Warden-Access-Token: <token>
 // Warden-State-Path: <state-path>
@@ -100,7 +111,13 @@ func Login(req *LoginRequest) (sdk.BitwardenClientInterface, error) {
 // Warden-Identity-Url: <url>
 // Put the client into the context and so if a context contains our client
 // we know that calls are authenticated.
-func Warden(next http.Handler) http.Handler {
+func NewWarden(statePath string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return warden(next, statePath)
+	}
+}
+
+func warden(next http.Handler, statePath string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get(WardenHeaderAccessToken)
 		if token == "" {
@@ -119,7 +136,7 @@ func Warden(next http.Handler) http.Handler {
 		}
 
 		// Make sure every request gets its own client that it will close after it's done.
-		client, err := Login(loginRequest)
+		client, err := Login(loginRequest, statePath)
 		if err != nil {
 			http.Error(w, "failed to login to bitwarden using access token: "+err.Error(), http.StatusBadRequest)
 
@@ -130,4 +147,25 @@ func Warden(next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), ContextClientKey, client)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+// EnsureStatePath creates the state file's directory and checks if it is writable.
+// Without a usable state file every request re-authenticates. This could be problematic
+// for rate-limiters.
+func EnsureStatePath(statePath string) error {
+	dir := filepath.Dir(statePath)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return fmt.Errorf("failed to create state directory %q: %w", dir, err)
+	}
+
+	probe := filepath.Join(dir, ".write-probe")
+	if err := os.WriteFile(probe, []byte{}, 0o600); err != nil {
+		return fmt.Errorf("state directory %q is not writable: %w", dir, err)
+	}
+
+	if err := os.Remove(probe); err != nil {
+		return fmt.Errorf("failed to clean up write probe in %q: %w", dir, err)
+	}
+
+	return nil
 }

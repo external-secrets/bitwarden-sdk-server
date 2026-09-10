@@ -33,7 +33,7 @@ endif
 
 # List the GOOS and GOARCH to build
 GO_LDFLAGS_STATIC="-s -w $(CTIMEVAR) -extldflags -static"
-GOLANGCI_LINT_VERSION ?= v2.12.2
+GOLANGCI_LINT_VERSION ?= v2.13.2
 MKCERT_VERSION ?= v1.4.4
 
 .DEFAULT_GOAL := help
