@@ -118,7 +118,19 @@ func TestEnsureStatePath(t *testing.T) {
 		assert.DirExists(t, filepath.Dir(statePath))
 	})
 
+	t.Run("fails when the parent is not a directory", func(t *testing.T) {
+		notADir := filepath.Join(t.TempDir(), "not-a-directory")
+		require.NoError(t, os.WriteFile(notADir, nil, 0o600))
+
+		err := EnsureStatePath(filepath.Join(notADir, ".bitwarden-state"))
+		require.ErrorContains(t, err, "failed to create state directory")
+	})
+
 	t.Run("fails on a read-only directory", func(t *testing.T) {
+		if os.Geteuid() == 0 {
+			t.Skip("root bypasses the directory mode via CAP_DAC_OVERRIDE")
+		}
+
 		dir := t.TempDir()
 		require.NoError(t, os.Chmod(dir, 0o500))
 		t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })

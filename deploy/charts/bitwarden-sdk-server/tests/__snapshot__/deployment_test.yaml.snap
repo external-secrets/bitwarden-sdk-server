@@ -25,7 +25,7 @@ deployment should match snapshot:
         spec:
           containers:
             - args:
-                - --state-path=/state/.bitwarden-state
+                - --state-path=/home/nonroot/.bitwarden-state
               image: ghcr.io/external-secrets/bitwarden-sdk-server:v0.8.0
               imagePullPolicy: IfNotPresent
               livenessProbe:
@@ -48,7 +48,7 @@ deployment should match snapshot:
               volumeMounts:
                 - mountPath: /certs
                   name: bitwarden-tls-certs
-                - mountPath: /state
+                - mountPath: /home/nonroot
                   name: bitwarden-state
           securityContext: {}
           serviceAccountName: bitwarden-sdk-server

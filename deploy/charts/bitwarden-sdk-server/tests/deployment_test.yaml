@@ -74,7 +74,7 @@ tests:
           path: spec.template.spec.containers[0].volumeMounts
       - contains:
           path: spec.template.spec.containers[0].args
-          content: --state-path=/state/.bitwarden-state
+          content: --state-path=/home/nonroot/.bitwarden-state
   - it: Should disable session persistence entirely
     set:
       state.enabled: false

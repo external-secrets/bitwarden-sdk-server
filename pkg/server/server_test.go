@@ -613,21 +613,13 @@ func TestHandlerWithNoClientInContext(t *testing.T) {
 
 func TestResolveStatePath(t *testing.T) {
 	t.Run("explicit path that cannot be written is fatal", func(t *testing.T) {
-		dir := t.TempDir()
-		require.NoError(t, os.Chmod(dir, 0o500))
-		t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
-
-		s := NewServer(Config{StatePath: filepath.Join(dir, "nested", ".bitwarden-state"), StatePathExplicit: true})
+		s := NewServer(Config{StatePath: unusableStatePath(t), StatePathExplicit: true})
 		_, err := s.resolveStatePath()
 		require.Error(t, err)
 	})
 
 	t.Run("defaulted path that cannot be written falls back to stateless", func(t *testing.T) {
-		dir := t.TempDir()
-		require.NoError(t, os.Chmod(dir, 0o500))
-		t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
-
-		s := NewServer(Config{StatePath: filepath.Join(dir, "nested", ".bitwarden-state")})
+		s := NewServer(Config{StatePath: unusableStatePath(t)})
 		statePath, err := s.resolveStatePath()
 		require.NoError(t, err)
 		assert.Empty(t, statePath)
@@ -647,4 +639,15 @@ func TestResolveStatePath(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, want, statePath)
 	})
+}
+
+// unusableStatePath puts a regular file where a directory needs to be, which fails with
+// ENOTDIR for every user. Mode bits would not, since root bypasses them.
+func unusableStatePath(t *testing.T) string {
+	t.Helper()
+
+	notADir := filepath.Join(t.TempDir(), "not-a-directory")
+	require.NoError(t, os.WriteFile(notADir, nil, 0o600))
+
+	return filepath.Join(notADir, ".bitwarden-state")
 }

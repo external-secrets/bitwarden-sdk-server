@@ -24,7 +24,7 @@ state:
   # Set to `false` to re-authenticate on every request instead of persisting a session.
   enabled: true
   # Full path to the state file. Its parent directory is where the volume is mounted.
-  path: /state/.bitwarden-state
+  path: /home/nonroot/.bitwarden-state
   # Set to `false` to write into the container filesystem instead of a mounted volume.
   # Requires a writable root filesystem.
   mountVolume: true

@@ -128,7 +128,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 func (s *Server) getSecretHandler(w http.ResponseWriter, r *http.Request) {
-	c, request, err := s.getClient[*sdk.SecretGetRequest](r)
+	c, request, err := s.getClient[sdk.SecretGetRequest](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
@@ -146,7 +146,7 @@ func (s *Server) getSecretHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getByIdsSecretHandler(w http.ResponseWriter, r *http.Request) {
-	c, request, err := s.getClient[*sdk.SecretsGetRequest](r)
+	c, request, err := s.getClient[sdk.SecretsGetRequest](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
@@ -164,7 +164,7 @@ func (s *Server) getByIdsSecretHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) listSecretsHandler(w http.ResponseWriter, r *http.Request) {
-	c, request, err := s.getClient[*sdk.SecretIdentifiersRequest](r)
+	c, request, err := s.getClient[sdk.SecretIdentifiersRequest](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
@@ -182,7 +182,7 @@ func (s *Server) listSecretsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) deleteSecretHandler(w http.ResponseWriter, r *http.Request) {
-	c, request, err := s.getClient[*sdk.SecretsDeleteRequest](r)
+	c, request, err := s.getClient[sdk.SecretsDeleteRequest](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 
@@ -200,7 +200,7 @@ func (s *Server) deleteSecretHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) createSecretHandler(w http.ResponseWriter, r *http.Request) {
-	c, request, err := s.getClient[*sdk.SecretCreateRequest](r)
+	c, request, err := s.getClient[sdk.SecretCreateRequest](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 
@@ -218,7 +218,7 @@ func (s *Server) createSecretHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) updateSecretHandler(w http.ResponseWriter, r *http.Request) {
-	c, request, err := s.getClient[*sdk.SecretPutRequest](r)
+	c, request, err := s.getClient[sdk.SecretPutRequest](r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 
