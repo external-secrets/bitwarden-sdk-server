@@ -35,11 +35,15 @@ const (
 )
 
 type Config struct {
-	Insecure bool
-	Debug    bool
-	Addr     string
-	KeyFile  string
-	CertFile string
+	Insecure            bool
+	Debug               bool
+	Addr                string
+	KeyFile             string
+	CertFile            string
+	TLSCiphers          string
+	TLSMinVersion       string
+	TLSCurvePreferences []string
+	DisableHTTP2        bool
 	// StatePath is the file the BitWarden SDK persists its session into.
 	// Empty disables persistence and re-authenticates on every request.
 	StatePath string
@@ -56,11 +60,20 @@ type Server struct {
 }
 
 func NewServer(cfg Config) *Server {
-	return &Server{Config: cfg}
+	return &Server{
+		Config: cfg,
+		// Assign before Run so Shutdown cannot race the listen goroutine.
+		server: &http.Server{Addr: cfg.Addr, ReadTimeout: 5 * time.Second},
+	}
 }
 
 func (s *Server) Run(_ context.Context) error {
 	statePath, err := s.resolveStatePath()
+	if err != nil {
+		return err
+	}
+
+	tlsCfg, err := s.TLSConfig()
 	if err != nil {
 		return err
 	}
@@ -87,16 +100,20 @@ func (s *Server) Run(_ context.Context) error {
 	warden.Put("/secret", s.updateSecretHandler)
 
 	r.Mount(api, warden)
-
-	srv := &http.Server{Addr: s.Addr, Handler: r, ReadTimeout: 5 * time.Second}
-	s.server = srv
+	s.server.Handler = r
 
 	if s.Insecure {
 		slog.Info("starting to listen on http", "addr", s.Addr)
-		return srv.ListenAndServe()
+		return s.server.ListenAndServe()
 	}
 
-	return srv.ListenAndServeTLS(s.CertFile, s.KeyFile)
+	s.server.TLSConfig = tlsCfg
+	if s.DisableHTTP2 {
+		p := new(http.Protocols)
+		p.SetHTTP1(true)
+		s.server.Protocols = p
+	}
+	return s.server.ListenAndServeTLS(s.CertFile, s.KeyFile)
 }
 
 // resolveStatePath verifies the state path is usable. An explicitly requested path that
@@ -124,6 +141,10 @@ func (s *Server) resolveStatePath() (string, error) {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
+	if s.server == nil {
+		return nil
+	}
+
 	return s.server.Shutdown(ctx)
 }
 

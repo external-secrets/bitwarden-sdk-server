@@ -38,7 +38,8 @@ var (
 	}
 
 	rootArgs struct {
-		server server.Config
+		server      server.Config
+		enableHTTP2 bool
 	}
 )
 
@@ -51,12 +52,24 @@ func init() {
 	flag.StringVar(&rootArgs.server.CertFile, "cert-file", "/certs/cert.pem", "--cert-file /certs/cert.pem")
 	flag.StringVar(&rootArgs.server.Addr, "hostname", ":9998", "--hostname :9998")
 	flag.StringVar(&rootArgs.server.StatePath, "state-path", bitwarden.DefaultStatePath, "--state-path "+bitwarden.DefaultStatePath+" (empty disables session persistence)")
+	flag.StringVar(&rootArgs.server.TLSCiphers, "tls-ciphers", "", "comma separated list of TLS ciphers allowed for the server. "+
+		"This does not apply to TLS 1.3 as the ciphers are selected automatically. "+
+		"Full lists of available ciphers can be found at https://pkg.go.dev/crypto/tls#pkg-constants")
+	flag.StringVar(&rootArgs.server.TLSMinVersion, "tls-min-version", "", "minimum version of TLS supported for the server. "+
+		"Valid values: 1.0, 1.1, 1.2, 1.3. If not specified, Go's default minimum version is used.")
+	flag.StringSliceVar(&rootArgs.server.TLSCurvePreferences, "tls-curve-preferences", nil,
+		"comma separated list of TLS key exchange curves allowed for the server. "+
+			"Use names like CurveP256, X25519, X25519MLKEM768, or a decimal CurveID. "+
+			"If omitted, Go defaults are used.")
+	flag.BoolVar(&rootArgs.enableHTTP2, "enable-http2", true,
+		"Enable HTTP/2 for the server. Set to false to disable.")
 }
 
 const timeout = 15 * time.Second
 
 func runServeCmd(cmd *cobra.Command, _ []string) error {
 	rootArgs.server.StatePathExplicit = cmd.Flags().Changed("state-path")
+	rootArgs.server.DisableHTTP2 = !rootArgs.enableHTTP2
 
 	svr := server.NewServer(rootArgs.server)
 	errorChannel := make(chan error, 1)

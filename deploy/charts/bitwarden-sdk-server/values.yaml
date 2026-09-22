@@ -31,6 +31,23 @@ state:
   # Overrides the default emptyDir volume, e.g. to use a PVC.
   volume: {}
 
+# -- If true, HTTP/2 is enabled for the TLS server.
+# Set to false to disable HTTP/2.
+enableHTTP2: true
+
+# -- TLS security profile for the HTTPS server.
+# When empty, Go defaults apply. These flags are omitted from container args unless set.
+tlsProfile:
+  # -- Minimum TLS version supported (e.g. "1.2" or "1.3"). If empty, Go defaults apply.
+  minVersion: ""
+  # -- TLS cipher suites (TLS_CIPHER_SUITE names).
+  # Does not apply to TLS 1.3. If empty, Go defaults apply.
+  ciphers: []
+  # -- TLS key exchange curves allowed for the server.
+  # Use names like CurveP256, X25519, X25519MLKEM768, or a decimal CurveID.
+  # If empty, Go defaults apply.
+  curvePreferences: []
+
 imagePullSecrets: []
 nameOverride: "bitwarden-sdk-server"
 fullnameOverride: "bitwarden-sdk-server"
