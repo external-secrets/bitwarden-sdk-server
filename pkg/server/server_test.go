@@ -100,6 +100,8 @@ func TestNewServer(t *testing.T) {
 	s := NewServer(cfg)
 	assert.Equal(t, cfg.Addr, s.Addr)
 	assert.True(t, s.Insecure)
+	require.NotNil(t, s.server)
+	assert.Equal(t, cfg.Addr, s.server.Addr)
 }
 
 func TestReadyEndpoint(t *testing.T) {
@@ -650,4 +652,35 @@ func unusableStatePath(t *testing.T) string {
 	require.NoError(t, os.WriteFile(notADir, nil, 0o600))
 
 	return filepath.Join(notADir, ".bitwarden-state")
+}
+
+func TestShutdown(t *testing.T) {
+	tests := []struct {
+		name    string
+		srv     *Server
+		thenRun bool
+	}{
+		{
+			name: "http.Server is nil",
+			srv:  &Server{},
+		},
+		{
+			name: "server has not started",
+			srv:  NewServer(Config{}),
+		},
+		{
+			name:    "shutdown before listen",
+			srv:     NewServer(Config{Insecure: true, Addr: "127.0.0.1:0"}),
+			thenRun: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.NoError(t, tt.srv.Shutdown(context.Background()))
+			if tt.thenRun {
+				require.ErrorIs(t, tt.srv.Run(context.Background()), http.ErrServerClosed)
+			}
+		})
+	}
 }

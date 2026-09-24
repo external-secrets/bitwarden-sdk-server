@@ -48,6 +48,21 @@ spec:
           args:
             {{- if not .Values.image.tls.enabled }}
             - --insecure
+            {{- else }}
+            {{- if eq .Values.enableHTTP2 false }}
+            - --enable-http2=false
+            {{- end }}
+            {{- with .Values.tlsProfile }}
+            {{- if .minVersion }}
+            - --tls-min-version={{ .minVersion }}
+            {{- end }}
+            {{- if .ciphers }}
+            - --tls-ciphers={{ join "," .ciphers }}
+            {{- end }}
+            {{- if .curvePreferences }}
+            - --tls-curve-preferences={{ join "," .curvePreferences }}
+            {{- end }}
+            {{- end }}
             {{- end }}
             - --state-path={{ if .Values.state.enabled }}{{ .Values.state.path }}{{ end }}
           {{- with .Values.extraEnv }}

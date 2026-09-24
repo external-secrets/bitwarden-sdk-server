@@ -46,8 +46,14 @@ $(MKCERT): $(LOCALBIN)
 
 ##@ Build
 
+# Platform-specific CGO linker flags.
+BUILD_CGO_LDFLAGS ?=
+ifeq ($(UNAME),darwin)
+BUILD_CGO_LDFLAGS := -framework CoreFoundation
+endif
+
 build: ## Builds binaries
-	CGO_LDFLAGS="-framework CoreFoundation" CGO_ENABLED=1 go build -ldflags='-s -w' -o $(LOCALBIN)/$(NAME) main.go
+	CGO_LDFLAGS="$(BUILD_CGO_LDFLAGS)" CGO_ENABLED=1 go build -ldflags='-s -w' -o $(LOCALBIN)/$(NAME) main.go
 
 build-docker: ## Builds binaries
 	CC=musl-gcc CGO_LDFLAGS="-lm" CGO_ENABLED=1 go build -a -ldflags '-linkmode external -extldflags "-static -Wl,-unresolved-symbols=ignore-all"' -o $(LOCALBIN)/$(NAME) main.go

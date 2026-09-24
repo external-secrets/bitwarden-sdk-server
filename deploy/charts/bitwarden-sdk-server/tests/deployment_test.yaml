@@ -87,3 +87,81 @@ tests:
           path: spec.template.spec.volumes
       - notExists:
           path: spec.template.spec.containers[0].volumeMounts
+  - it: should not have TLS profile args by default
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - --state-path=/home/nonroot/.bitwarden-state
+  - it: should pass insecure when tls is disabled
+    set:
+      image.tls.enabled: false
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - --insecure
+            - --state-path=/home/nonroot/.bitwarden-state
+  - it: should not pass TLS profile args when tls is disabled
+    set:
+      image.tls.enabled: false
+      enableHTTP2: false
+      tlsProfile.minVersion: "1.3"
+      tlsProfile.ciphers:
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+      tlsProfile.curvePreferences:
+        - X25519
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - --insecure
+            - --state-path=/home/nonroot/.bitwarden-state
+  - it: should pass enable-http2=false when disabled
+    set:
+      enableHTTP2: false
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--enable-http2=false"
+  - it: should add tls-min-version when set
+    set:
+      tlsProfile.minVersion: "1.3"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--tls-min-version=1.3"
+  - it: should add tls-ciphers when set
+    set:
+      tlsProfile.ciphers:
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--tls-ciphers=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+  - it: should join multiple tls-ciphers with commas
+    set:
+      tlsProfile.ciphers:
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--tls-ciphers=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
+  - it: should add tls-curve-preferences when set
+    set:
+      tlsProfile.curvePreferences:
+        - X25519
+        - CurveP256
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--tls-curve-preferences=X25519,CurveP256"
+  - it: should omit TLS profile args when tlsProfile is null
+    set:
+      tlsProfile: null
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - --state-path=/home/nonroot/.bitwarden-state
