@@ -226,7 +226,7 @@ func TestWardenClosesClientOnLoginFailure(t *testing.T) {
 	server := httptest.NewServer(r)
 	defer server.Close()
 
-	req, err := http.NewRequest(http.MethodGet, server.URL+"/", nil)
+	req, err := http.NewRequest(http.MethodGet, server.URL+"/", http.NoBody)
 	require.NoError(t, err)
 	req.Header.Set(WardenHeaderAccessToken, testToken)
 	resp, err := server.Client().Do(req)
