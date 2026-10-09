@@ -97,6 +97,8 @@ func Login(req *LoginRequest, statePathDefault string) (sdk.BitwardenClientInter
 	}
 
 	if err := bitwardenClient.AccessTokenLogin(req.AccessToken, state); err != nil {
+		bitwardenClient.Close()
+
 		return nil, fmt.Errorf("bitwarden login: %w", err)
 	}
 
