@@ -16,6 +16,7 @@ package bitwarden
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -36,6 +37,8 @@ const testToken = "0.0f0a8a7e-d737-498d-be6a-b1930064c31c.Rjqj7Vt7ZcDADtpbuzgx0h
 
 type testClient struct {
 	statePath *string
+	loginErr  error
+	closed    bool
 }
 
 var _ sdk.BitwardenClientInterface = &testClient{}
@@ -49,7 +52,7 @@ var _ sdk.SecretsInterface = &testSecrets{}
 func (t *testClient) AccessTokenLogin(accessToken string, statePath *string) error {
 	t.statePath = statePath
 
-	return nil
+	return t.loginErr
 }
 
 func (t *testClient) Projects() sdk.ProjectsInterface {
@@ -60,7 +63,9 @@ func (t *testClient) Secrets() sdk.SecretsInterface {
 	return nil
 }
 
-func (t *testClient) Close() {}
+func (t *testClient) Close() {
+	t.closed = true
+}
 
 func (t *testClient) Generators() sdk.GeneratorsInterface {
 	return nil
@@ -175,4 +180,59 @@ func TestLoginStatePath(t *testing.T) {
 			assert.Equal(t, tt.want, mockClient.statePath)
 		})
 	}
+}
+
+func TestLoginClosesClientOnFailure(t *testing.T) {
+	prevBitwardenClient := newBitwardenClientFn
+	mockClient := &testClient{loginErr: errors.New("error sending request")}
+	newBitwardenClientFn = testBitwardenClient(mockClient)
+	defer func() {
+		newBitwardenClientFn = prevBitwardenClient
+	}()
+
+	client, err := Login(&LoginRequest{RequestBase: &RequestBase{}, AccessToken: testToken}, "")
+	require.ErrorContains(t, err, "bitwarden login: error sending request")
+	assert.Nil(t, client)
+	assert.True(t, mockClient.closed, "client must be closed when login fails")
+}
+
+func TestLoginKeepsClientOpenOnSuccess(t *testing.T) {
+	prevBitwardenClient := newBitwardenClientFn
+	mockClient := &testClient{}
+	newBitwardenClientFn = testBitwardenClient(mockClient)
+	defer func() {
+		newBitwardenClientFn = prevBitwardenClient
+	}()
+
+	client, err := Login(&LoginRequest{RequestBase: &RequestBase{}, AccessToken: testToken}, "")
+	require.NoError(t, err)
+	assert.Same(t, mockClient, client)
+	assert.False(t, mockClient.closed, "the caller is responsible for closing a logged in client")
+}
+
+func TestWardenClosesClientOnLoginFailure(t *testing.T) {
+	prevBitwardenClient := newBitwardenClientFn
+	mockClient := &testClient{loginErr: errors.New("error sending request")}
+	newBitwardenClientFn = testBitwardenClient(mockClient)
+	defer func() {
+		newBitwardenClientFn = prevBitwardenClient
+	}()
+
+	r := chi.NewRouter()
+	r.Use(NewWarden(""))
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		t.Error("handler must not be reached when login fails")
+	})
+	server := httptest.NewServer(r)
+	defer server.Close()
+
+	req, err := http.NewRequest(http.MethodGet, server.URL+"/", http.NoBody)
+	require.NoError(t, err)
+	req.Header.Set(WardenHeaderAccessToken, testToken)
+	resp, err := server.Client().Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.True(t, mockClient.closed, "client must be closed when login fails")
 }
