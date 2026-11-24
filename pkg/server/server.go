@@ -44,8 +44,8 @@ type Config struct {
 	TLSMinVersion       string
 	TLSCurvePreferences []string
 	DisableHTTP2        bool
-	// StatePath is the file the BitWarden SDK persists its session into.
-	// Empty disables persistence and re-authenticates on every request.
+	// StatePath is the base path for the files the BitWarden SDK persists its sessions into,
+	// one per access token. Empty disables persistence and re-authenticates on every request.
 	StatePath string
 	// StatePathExplicit reports whether StatePath was asked for rather than defaulted,
 	// which decides between failing and falling back to a stateless session.

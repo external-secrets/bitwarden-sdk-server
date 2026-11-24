@@ -171,6 +171,10 @@ Warden-Api-Url: <url>
 Warden-Identity-Url: <url>
 ```
 
+The SDK stores its session in a state file encrypted with a key from the access token, so the server keeps one
+state file per token. The files live next to `--state-path`, named after the path and the token's ID, e.g.
+`/home/nonroot/.bitwarden-state-<access-token-id>`. `Warden-State-Path` replaces that file for a request.
+
 A sample call could look something like this:
 
 ```

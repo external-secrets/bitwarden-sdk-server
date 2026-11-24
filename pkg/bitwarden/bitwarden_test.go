@@ -22,7 +22,11 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/bitwarden/sdk-go/v2"
 	"github.com/go-chi/chi/v5"
@@ -154,15 +158,21 @@ func TestEnsureStatePath(t *testing.T) {
 	})
 }
 
+// testTokenID is the access token ID embedded in testToken, "0.<id>.<secret>:<key>".
+var testTokenID = strings.Split(testToken, ".")[1]
+
 func TestLoginStatePath(t *testing.T) {
+	fallback := filepath.Join(string(filepath.Separator), "state", ".bitwarden-state")
+
 	tests := []struct {
 		name     string
 		header   string
 		fallback string
 		want     *string
 	}{
-		{name: "header wins over the fallback", header: "/from/header", fallback: "/from/flag", want: new("/from/header")},
-		{name: "fallback is used without a header", fallback: "/from/flag", want: new("/from/flag")},
+		{name: "each token gets its own file without a header", fallback: fallback, want: new(fallback + "-" + testTokenID)},
+		{name: "header wins over the per-token file", header: "/from/header", fallback: fallback, want: new("/from/header")},
+		{name: "header is used when state is disabled", header: "/from/header", want: new("/from/header")},
 		{name: "no path at all stays in memory", want: nil},
 	}
 
@@ -180,6 +190,76 @@ func TestLoginStatePath(t *testing.T) {
 			assert.Equal(t, tt.want, mockClient.statePath)
 		})
 	}
+}
+
+func TestStateFileID(t *testing.T) {
+	t.Run("uses the access token ID", func(t *testing.T) {
+		assert.Equal(t, testTokenID, stateFileID(testToken))
+	})
+
+	t.Run("lowercases the access token ID", func(t *testing.T) {
+		assert.Equal(t, testTokenID, stateFileID("0.0F0A8A7E-D737-498D-BE6A-B1930064C31C.secret:key"))
+	})
+
+	t.Run("tokens with different IDs get different files", func(t *testing.T) {
+		other := "0.11111111-2222-3333-4444-555555555555.secret:key"
+		assert.NotEqual(t, stateFileID(testToken), stateFileID(other))
+	})
+
+	t.Run("falls back to a hash for an unknown format", func(t *testing.T) {
+		id := stateFileID("../../not-a-token")
+		assert.Len(t, id, 64)
+		assert.Equal(t, filepath.Base(id), id)
+		assert.NotEqual(t, id, stateFileID("../../another-token"))
+	})
+}
+
+type concurrencyClient struct {
+	testClient
+
+	active    *atomic.Int32
+	maxActive *atomic.Int32
+}
+
+func (c *concurrencyClient) AccessTokenLogin(_ string, _ *string) error {
+	n := c.active.Add(1)
+	defer c.active.Add(-1)
+
+	for {
+		m := c.maxActive.Load()
+		if n <= m || c.maxActive.CompareAndSwap(m, n) {
+			break
+		}
+	}
+
+	time.Sleep(5 * time.Millisecond)
+
+	return nil
+}
+
+func TestLoginSerializesLoginsSharingAStateFile(t *testing.T) {
+	var active, maxActive atomic.Int32
+
+	prevBitwardenClient := newBitwardenClientFn
+	newBitwardenClientFn = func(_, _ *string) (sdk.BitwardenClientInterface, error) {
+		return &concurrencyClient{active: &active, maxActive: &maxActive}, nil
+	}
+	defer func() {
+		newBitwardenClientFn = prevBitwardenClient
+	}()
+
+	fallback := filepath.Join(t.TempDir(), ".bitwarden-state")
+
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Go(func() {
+			_, err := Login(&LoginRequest{RequestBase: &RequestBase{}, AccessToken: testToken}, fallback)
+			assert.NoError(t, err)
+		})
+	}
+	wg.Wait()
+
+	assert.Equal(t, int32(1), maxActive.Load(), "logins sharing a state file must not overlap")
 }
 
 func TestLoginClosesClientOnFailure(t *testing.T) {
@@ -235,4 +315,29 @@ func TestWardenClosesClientOnLoginFailure(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	assert.True(t, mockClient.closed, "client must be closed when login fails")
+}
+
+func TestPathLocksIsolationTimeoutAndCleanup(t *testing.T) {
+	locks := newPathLocks()
+	releaseA, ok := locks.acquire("a", time.Second)
+	require.True(t, ok)
+
+	// A held lock must not delay a different path.
+	releaseB, ok := locks.acquire("b", time.Second)
+	require.True(t, ok)
+	releaseB()
+
+	started := time.Now()
+	releaseWaiter, ok := locks.acquire("a", 20*time.Millisecond)
+	require.False(t, ok)
+	assert.GreaterOrEqual(t, time.Since(started), 20*time.Millisecond)
+	releaseWaiter()
+	releaseA()
+
+	releaseAgain, ok := locks.acquire("a", time.Second)
+	require.True(t, ok)
+	releaseAgain()
+	locks.mu.Lock()
+	defer locks.mu.Unlock()
+	assert.Empty(t, locks.locks)
 }
