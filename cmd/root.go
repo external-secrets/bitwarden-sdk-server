@@ -51,7 +51,8 @@ func init() {
 	flag.StringVar(&rootArgs.server.KeyFile, "key-file", "/certs/key.pem", "--key-file /certs/key.pem")
 	flag.StringVar(&rootArgs.server.CertFile, "cert-file", "/certs/cert.pem", "--cert-file /certs/cert.pem")
 	flag.StringVar(&rootArgs.server.Addr, "hostname", ":9998", "--hostname :9998")
-	flag.StringVar(&rootArgs.server.StatePath, "state-path", bitwarden.DefaultStatePath, "--state-path "+bitwarden.DefaultStatePath+" (empty disables session persistence)")
+	flag.StringVar(&rootArgs.server.StatePath, "state-path", bitwarden.DefaultStatePath,
+		"--state-path "+bitwarden.DefaultStatePath+" (one file per access token is kept next to this path; empty disables session persistence)")
 	flag.StringVar(&rootArgs.server.TLSCiphers, "tls-ciphers", "", "comma separated list of TLS ciphers allowed for the server. "+
 		"This does not apply to TLS 1.3 as the ciphers are selected automatically. "+
 		"Full lists of available ciphers can be found at https://pkg.go.dev/crypto/tls#pkg-constants")
